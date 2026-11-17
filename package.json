@@ -1,0 +1,17 @@
+{
+  "name": "cv-certify",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CV-Certify: profile-based, AI-tailored, verifiable resumes and cover letters.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "start": "node dev-server.mjs",
+    "test": "node --test tests/unit.test.mjs",
+    "test:e2e": "node tests/e2e.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.5.0"
+  }
+}

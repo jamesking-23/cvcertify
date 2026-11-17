@@ -1,0 +1,28 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  command = "echo 'static site, no build step'"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["netlify/lib/**"]
+
+# Single-page app: every non-file route serves index.html.
+# /api/* is handled by netlify/functions/api.mjs (see its `config.path`).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
