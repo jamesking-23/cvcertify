@@ -1,5 +1,7 @@
 # CV-Certify
 
+[![CI](https://github.com/jamesking-23/cvcertify/actions/workflows/ci.yml/badge.svg)](https://github.com/jamesking-23/cvcertify/actions/workflows/ci.yml) · [Roadmap](ROADMAP.md)
+
 **A job for everyone.** One profile, every career document: AI-tailored resumes and cover letters, an ATS scanner, interview prep, country-aware formats, and **verifiable document IDs** recruiters can check without an account.
 
 Rebuilt from the original Netlify site with a cleaner UI/UX and working end-to-end features.

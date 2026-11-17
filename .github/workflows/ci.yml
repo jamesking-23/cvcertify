@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Unit and API tests
+        run: npm test
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end test (real browser, full user journey)
+        run: npm run test:e2e
+        env:
+          SHOTS_DIR: ${{ github.workspace }}/screenshots
+      - name: Upload screenshots of the running app
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
