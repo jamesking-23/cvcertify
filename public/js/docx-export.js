@@ -1,5 +1,5 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, TabStopType, ExternalHyperlink } from 'docx';
-import { COUNTRIES, dateRange } from '../../public/js/shared/constants.js';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, TabStopType, ExternalHyperlink } from 'https://esm.sh/docx@9.5.0';
+import { COUNTRIES, dateRange } from './shared/constants.js';
 
 const STYLES = {
   classic: { font: 'Georgia', accent: '000000', head: '000000' },
@@ -98,7 +98,7 @@ export async function resumeToDocx({ content, template, country, docId, verifyUr
     title: `${p.fullName || 'Resume'} – ${rules.doc}`,
     sections: [{ properties: { page: { size: rules.paper === 'Letter' ? LETTER : A4, margin: { top: 720, bottom: 720, left: 800, right: 800 } } }, children: body }],
   });
-  return Packer.toBuffer(doc);
+  return Packer.toBlob(doc);
 }
 
 export async function letterToDocx({ text, name }) {
@@ -106,5 +106,5 @@ export async function letterToDocx({ text, name }) {
     .split(/\n{2,}/)
     .map((block) => new Paragraph({ spacing: { after: 160, line: 300 }, children: block.split('\n').flatMap((line, i) => [new TextRun({ text: line, font: 'Calibri', size: 23, break: i ? 1 : 0 })]) }));
   const doc = new Document({ creator: 'CV-Certify', title: `${name || 'Cover letter'}`, sections: [{ properties: { page: { margin: { top: 1200, bottom: 1200, left: 1300, right: 1300 } } }, children: paras }] });
-  return Packer.toBuffer(doc);
+  return Packer.toBlob(doc);
 }

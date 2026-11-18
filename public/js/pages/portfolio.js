@@ -20,7 +20,7 @@ export default async function portfolioPage() {
     if (links.length < 8) linkHost.append(h('button', { class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: () => { links.push({ label: '', url: '' }); drawLinks(); } }, icon('plus', 'icon-sm'), 'Add link'));
   };
   drawLinks();
-  const url = () => `${location.origin}/p/${slug.value.trim().toLowerCase()}`;
+  const url = () => `${location.origin}${location.pathname}#/p/${slug.value.trim().toLowerCase()}`;
   const preview = h('div', { class: 'row small muted' });
   const showUrl = () => { clear(preview).append(icon('globe', 'icon-sm'), url()); };
   slug.addEventListener('input', showUrl);

@@ -15,11 +15,11 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Unit and API tests
+      - name: Unit tests
         run: npm test
       - name: Install browser
         run: npx playwright install --with-deps chromium
-      - name: End-to-end test (real browser, full user journey)
+      - name: Browser smoke test (Supabase faked)
         run: npm run test:e2e
         env:
           SHOTS_DIR: ${{ github.workspace }}/screenshots

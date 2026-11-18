@@ -1,5 +1,6 @@
 import { h, icon, clear, toast, setTitle } from './ui.js';
 import { get, post, ApiError } from './api.js';
+import { auth } from './supabase-lite.js';
 import { PLANS } from './shared/constants.js';
 
 export const state = { user: null, config: {} };
@@ -12,26 +13,28 @@ export const setUser = (u) => {
 };
 
 /* ---------- navigation ---------- */
+// Hash routing keeps the app working on static hosting (GitHub Pages) at any sub-path.
+// Location looks like  #/app/account?x=1#plans  (path, optional query, optional in-page anchor).
+export function here() {
+  const [beforeAnchor, anchor = ''] = location.hash.slice(1).split('#');
+  const [p, search = ''] = beforeAnchor.split('?');
+  const path = ('/' + p.replace(/^\/+/, '')).replace(/\/+$/, '') || '/';
+  return { path, search: search ? '?' + search : '', anchor };
+}
+
 export function navigate(to, { replace = false } = {}) {
-  if (to === location.pathname + location.search + location.hash) return render();
-  history[replace ? 'replaceState' : 'pushState']({}, '', to);
+  const target = '#' + to;
+  if (target === location.hash) return render();
+  history[replace ? 'replaceState' : 'pushState']({}, '', location.pathname + location.search + target);
   return render();
 }
 
-document.addEventListener('click', (e) => {
-  const a = e.target.closest?.('a[href]');
-  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank' || a.hasAttribute('download')) return;
-  const url = new URL(a.href, location.href);
-  if (url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
-  e.preventDefault();
-  navigate(url.pathname + url.search + url.hash);
-});
 window.addEventListener('popstate', render);
 window.addEventListener('cv:signed-out', () => {
   if (state.user) {
     state.user = null;
     toast('Your session expired. Please sign in again.', 'error');
-    navigate('/login?next=' + encodeURIComponent(location.pathname), { replace: true });
+    navigate('/login?next=' + encodeURIComponent(here().path), { replace: true });
   }
 });
 
@@ -68,8 +71,8 @@ export function logo(href = '/') {
 }
 
 function marketingShell(content) {
-  const here = location.pathname;
-  const link = (href, label) => h('a', { href, 'aria-current': here === href.split('#')[0] && href !== '/' ? 'page' : null }, label);
+  const cur = here().path;
+  const link = (href, label) => h('a', { href, 'aria-current': cur === href.split('#')[0] && href !== '/' ? 'page' : null }, label);
   const menu = h('div', { class: 'mobile-menu', id: 'mobile-menu' },
     h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'),
     state.user ? h('a', { href: '/app' }, 'Open dashboard') : [h('a', { href: '/login' }, 'Sign in'), h('a', { href: '/signup' }, 'Get started')]);
@@ -136,14 +139,14 @@ let renderId = 0;
 async function render() {
   const id = ++renderId;
   for (const fn of leaveHooks.splice(0)) { try { await fn(); } catch { /* ignore */ } }
-  const path = location.pathname.replace(/\/+$/, '') || '/';
+  const { path, search, anchor } = here();
   const route = routes.find((r) => r.re.test(path));
   if (!route) {
     setTitle('Page not found');
     clear(root).append(marketingShell(h('div', { class: 'container section center' }, h('h1', null, 'Page not found'), h('p', { class: 'muted', style: 'margin:12px 0 24px' }, 'That page does not exist or has moved.'), h('a', { class: 'btn btn-primary', href: '/' }, 'Back to home'))));
     return;
   }
-  if (route.app && !state.user) return navigate('/login?next=' + encodeURIComponent(path + location.search), { replace: true });
+  if (route.app && !state.user) return navigate('/login?next=' + encodeURIComponent(path + search), { replace: true });
   if (route.guestOnly && state.user) return navigate('/app', { replace: true });
 
   const m = route.re.exec(path);
@@ -151,11 +154,11 @@ async function render() {
   setTitle(route.title);
   clear(root).append(h('div', { style: 'min-height:60vh;display:grid;place-items:center' }, h('div', { class: 'spinner', role: 'status', 'aria-label': 'Loading' })));
   try {
-    const node = await route.load({ params, user: state.user, navigate, config: state.config, query: new URLSearchParams(location.search) });
+    const node = await route.load({ params, user: state.user, navigate, config: state.config, query: new URLSearchParams(search) });
     if (id !== renderId) return; // a newer navigation won
     const shell = route.bare ? node : route.app ? appShell(node, route.app) : marketingShell(node);
     clear(root).append(shell);
-    const target = route.scroll || location.hash.slice(1);
+    const target = route.scroll || new URLSearchParams(search).get('s') || anchor;
     if (target) document.getElementById(target)?.scrollIntoView();
     else window.scrollTo(0, 0);
     document.getElementById('main')?.focus?.({ preventScroll: true });
@@ -174,10 +177,15 @@ export const planName = (id) => PLANS[id]?.name || id;
 
 /* ---------- boot ---------- */
 (async () => {
+  // Email-confirmation, password-reset and Google sign-in links return here with tokens in the URL.
+  const back = auth.takeRedirect();
   try {
     const [cfg, me] = await Promise.all([get('/config').catch(() => ({})), get('/me').catch(() => ({ user: null }))]);
     state.config = cfg;
     state.user = me.user;
   } catch { /* render anyway */ }
+  if (back?.error) { history.replaceState({}, '', location.pathname + '#/login'); toast(back.error, 'error'); }
+  else if (back?.type === 'recovery') history.replaceState({}, '', location.pathname + '#/reset');
+  else if (back && state.user) history.replaceState({}, '', location.pathname + '#/app');
   render();
 })();

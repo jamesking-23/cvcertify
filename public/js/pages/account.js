@@ -12,11 +12,10 @@ export default function accountPage() {
     setBusy(saveName, false);
   } }, 'Save');
 
-  const cur = h('input', { class: 'input', type: 'password', autocomplete: 'current-password' });
   const nw = h('input', { class: 'input', type: 'password', autocomplete: 'new-password', placeholder: 'At least 8 characters' });
   const savePw = h('button', { class: 'btn btn-outline', onclick: async () => {
     setBusy(savePw, true, 'Updating…');
-    try { await patch('/me', { currentPassword: cur.value, newPassword: nw.value }); cur.value = nw.value = ''; toast('Password updated.'); } catch (e) { toast(e.message, 'error'); }
+    try { await patch('/me', { newPassword: nw.value }); nw.value = ''; toast('Password updated.'); } catch (e) { toast(e.message, 'error'); }
     setBusy(savePw, false);
   } }, 'Update password');
 
@@ -36,10 +35,10 @@ export default function accountPage() {
 
   const delBtn = h('button', { class: 'btn btn-danger', onclick: async () => {
     const email = h('input', { class: 'input', placeholder: u.email, 'aria-label': 'Type your email to confirm' });
-    const ok = await modal({ title: 'Delete your account?', body: h('div', { class: 'stack' }, h('p', { class: 'muted' }, 'This permanently deletes your profile, resumes and letters, and revokes every document ID you issued. Type your email to confirm.'), email), actions: [{ label: 'Cancel', value: false }, { label: 'Delete everything', value: true, class: 'btn-primary' }] });
+    const ok = await modal({ title: 'Delete your CV-Certify data?', body: h('div', { class: 'stack' }, h('p', { class: 'muted' }, 'This permanently deletes your CV-Certify profile, resumes and letters, and revokes every document ID you issued. Your sign-in stays active because it is shared with other apps on the same account. Type your email to confirm.'), email), actions: [{ label: 'Cancel', value: false }, { label: 'Delete everything', value: true, class: 'btn-primary' }] });
     if (!ok) return;
-    try { await del('/me', { confirm: email.value }); state.user = null; toast('Your account was deleted.'); navigate('/', { replace: true }); } catch (e) { toast(e.message, 'error'); }
-  } }, 'Delete account');
+    try { await del('/me', { confirm: email.value }); state.user = null; toast('Your CV-Certify data was deleted.'); navigate('/', { replace: true }); } catch (e) { toast(e.message, 'error'); }
+  } }, 'Delete my data');
 
   return h('div', { style: 'max-width:960px' },
     h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'Account & plan'), h('p', null, u.email))),
@@ -47,6 +46,6 @@ export default function accountPage() {
     !state.config.selfServePlans && h('div', { class: 'alert alert-warn', style: 'margin-top:14px' }, icon('alert'), 'Online payments are not enabled yet.'),
     h('div', { class: 'grid grid-2', style: 'margin-top:36px;align-items:start' },
       h('div', { class: 'card stack' }, h('h3', null, 'Profile'), h('div', { class: 'field' }, h('label', null, 'Full name'), name), h('div', null, saveName)),
-      u.hasPassword && h('div', { class: 'card stack' }, h('h3', null, 'Password'), h('div', { class: 'field' }, h('label', null, 'Current password'), cur), h('div', { class: 'field' }, h('label', null, 'New password'), nw), h('div', null, savePw))),
-    h('div', { class: 'card', style: 'margin-top:20px' }, h('h3', null, 'Danger zone'), h('p', { class: 'muted small', style: 'margin:6px 0 14px' }, 'Deleting your account cannot be undone.'), delBtn));
+      u.hasPassword && h('div', { class: 'card stack' }, h('h3', null, 'Password'), h('div', { class: 'field' }, h('label', null, 'New password'), nw), h('div', null, savePw))),
+    h('div', { class: 'card', style: 'margin-top:20px' }, h('h3', null, 'Danger zone'), h('p', { class: 'muted small', style: 'margin:6px 0 14px' }, 'Deleting your CV-Certify data cannot be undone.'), delBtn));
 }

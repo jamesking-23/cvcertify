@@ -46,7 +46,7 @@ export default function verifyPage({ params }) {
     btn.prepend(icon('search'));
   };
 
-  const form = h('form', { class: 'row', onsubmit: (e) => { e.preventDefault(); const v = input.value.trim(); history.replaceState({}, '', v ? '/verify/' + encodeURIComponent(v) : '/verify'); check(v); } }, h('div', { class: 'grow' }, input), btn);
+  const form = h('form', { class: 'row', onsubmit: (e) => { e.preventDefault(); const v = input.value.trim(); history.replaceState({}, '', location.pathname + '#' + (v ? '/verify/' + encodeURIComponent(v) : '/verify')); check(v); } }, h('div', { class: 'grow' }, input), btn);
   if (params.id) queueMicrotask(() => check(params.id));
 
   return h('div', { class: 'container container-sm section', style: 'max-width:760px' },

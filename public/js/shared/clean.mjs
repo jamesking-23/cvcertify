@@ -1,7 +1,7 @@
 // Input sanitisation for user-supplied documents. Anything that is not in the schema is dropped,
 // strings are length-capped and arrays are size-capped so a client can never store arbitrary blobs.
 
-import { COUNTRIES, TEMPLATES, emptyContent } from '../../public/js/shared/constants.js';
+import { COUNTRIES, TEMPLATES, emptyContent } from './constants.js';
 import { newId } from './util.mjs';
 
 const str = (v, max = 500) => (typeof v === 'string' ? v.replace(/\u0000/g, '').trim().slice(0, max) : '');

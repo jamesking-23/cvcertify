@@ -1,22 +1,22 @@
 // AI writing helpers. Uses the Anthropic Messages API when ANTHROPIC_API_KEY is set.
 // Every task has a deterministic fallback so the app stays usable without a key ("basic mode").
 
-import { HttpError } from './util.mjs';
-import { resumeToText, COUNTRIES, dateRange } from '../../public/js/shared/constants.js';
+import { HttpError, env } from './util.mjs';
+import { resumeToText, COUNTRIES, dateRange } from './constants.js';
 import { extractKeywords } from './ats.mjs';
 
-export const aiEnabled = () => !!process.env.ANTHROPIC_API_KEY;
+export const aiEnabled = () => !!env('ANTHROPIC_API_KEY');
 
 async function claude({ system, user, maxTokens = 2000 }) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'x-api-key': env('ANTHROPIC_API_KEY'),
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
+      model: env('ANTHROPIC_MODEL') || 'claude-sonnet-5-5',
       max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content: user }],

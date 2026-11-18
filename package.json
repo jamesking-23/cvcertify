@@ -3,18 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "CV-Certify: profile-based, AI-tailored, verifiable resumes and cover letters.",
+  "description": "CV-Certify: profile-based, AI-tailored, verifiable resumes and cover letters. Static front end (GitHub Pages) + Supabase.",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node dev-server.mjs",
-    "start": "node dev-server.mjs",
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "sync": "node scripts/sync-function.mjs",
     "test": "node --test tests/unit.test.mjs",
     "test:e2e": "node tests/e2e.mjs"
-  },
-  "dependencies": {
-    "docx": "^9.5.0"
   },
   "devDependencies": {
     "playwright": "^1.50.0"

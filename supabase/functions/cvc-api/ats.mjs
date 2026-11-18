@@ -1,6 +1,6 @@
 // Deterministic ATS scoring: no AI needed. Compares resume text with a job description.
 
-import { resumeToText } from '../../public/js/shared/constants.js';
+import { resumeToText } from './constants.js';
 
 const STOP = new Set(
   `a about above after again all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its just me more most my no nor not now of off on once only or other our out over own same she should so some such than that the their theirs them then there these they this those through to too under until up us very was we were what when where which while who whom why will with would you your yours

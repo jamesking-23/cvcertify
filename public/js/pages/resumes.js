@@ -59,7 +59,7 @@ export async function editor({ params }) {
 
   /* ---- preview ---- */
   const previewHost = h('div', { class: 'paper-wrap' });
-  const verifyUrl = () => `${location.origin}/verify/${cert.docId}`;
+  const verifyUrl = () => `${location.origin}${location.pathname}#/verify/${cert.docId}`;
   const drawPreview = () => {
     const paper = renderPaper({ content, template, country, docId: cert.docId, verifyUrl: cert.docId ? verifyUrl() : '', stale: changedSinceCertified === true });
     clear(previewHost).append(paper);

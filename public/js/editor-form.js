@@ -5,7 +5,7 @@ import { COUNTRIES, LANGUAGE_LEVELS } from './shared/constants.js';
 export function handleAiError(e) {
   if (e.status === 402) {
     modal({ title: e.code === 'quota_exceeded' ? 'AI quota reached' : 'Upgrade to unlock this', body: h('p', { class: 'muted' }, e.message), actions: [{ label: 'Not now', value: false }, { label: 'See plans', value: true, class: 'btn-brand' }] }).then((go) => {
-      if (go) { history.pushState({}, '', '/app/account#plans'); dispatchEvent(new PopStateEvent('popstate')); }
+      if (go) { location.hash = '/app/account#plans'; }
     });
   } else toast(e.message || 'Something went wrong.', 'error');
 }

@@ -9,6 +9,7 @@ export function h(tag, props, ...children) {
     if (k === 'class') el.className = v;
     else if (k === 'dataset') Object.assign(el.dataset, v);
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'href' && tag === 'a' && typeof v === 'string' && v.startsWith('/') && !v.startsWith('//')) el.setAttribute('href', '#' + v);
     else if (k === 'value') el.value = v;
     else if (k === 'checked' || k === 'disabled' || k === 'hidden' || k === 'selected' || k === 'required') el[k] = !!v;
     else el.setAttribute(k, v === true ? '' : v);
