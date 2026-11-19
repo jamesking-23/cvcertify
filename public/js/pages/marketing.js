@@ -2,6 +2,34 @@ import { h, icon } from '../ui.js';
 import { PLANS, PLAN_ORDER, TEMPLATES, COUNTRIES, emptyContent } from '../shared/constants.js';
 import { renderPaper } from '../preview.js';
 import { state } from '../main.js';
+import { formatPrice, isApprox } from '../shared/currency.js';
+
+const PHRASES = ['A job for everyone.', 'An identity for everyone.'];
+
+// Infinite typewriter. The longest phrase is rendered invisibly in the same grid cell, so the headline keeps its height while text is typed and deleted.
+function typewriter() {
+  const typed = h('span', { class: 'tw-text' }, PHRASES[0]);
+  const cursor = h('span', { class: 'tw-cursor' }, '|');
+  const ghost = h('span', { class: 'tw-ghost', 'aria-hidden': 'true' }, PHRASES.reduce((a, b) => (b.length > a.length ? b : a)), '|');
+  const el = h('h1', { class: 'typewriter', 'aria-label': PHRASES[0] }, ghost, h('span', { class: 'tw-live', 'aria-hidden': 'true' }, typed, cursor));
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return el;
+  const TYPE = 85, DELETE = 45, HOLD = 2500, GAP = 400;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    let i = 0;
+    await wait(HOLD);
+    while (el.isConnected) {
+      const cur = PHRASES[i];
+      for (let n = cur.length - 1; n >= 0 && el.isConnected; n--) { typed.textContent = cur.slice(0, n); await wait(DELETE); }
+      await wait(GAP);
+      i = (i + 1) % PHRASES.length;
+      const next = PHRASES[i];
+      for (let n = 1; n <= next.length && el.isConnected; n++) { typed.textContent = next.slice(0, n); await wait(TYPE); }
+      await wait(HOLD);
+    }
+  })();
+  return el;
+}
 
 const FEATURES = [
   ['file', 'AI Resume Writer', 'Rewrites bullet points, quantifies impact, and tailors your resume to any job description in seconds.'],
@@ -28,7 +56,7 @@ export function pricingCards() {
       const current = loggedIn && state.user.plan.id === id;
       return h('div', { class: `price-card${featured ? ' featured' : ''}` },
         h('div', { class: 'tier' }, p.name),
-        h('div', { class: 'price' }, p.price === 0 ? 'Free' : [`$${p.price}`, h('small', null, '/mo')]),
+        h('div', { class: 'price' }, p.price === 0 ? 'Free' : [formatPrice(p.price), h('small', null, '/mo'), isApprox() && h('small', { title: 'Estimated from UGX. Final billing is in UGX.', style: 'display:block;margin-top:2px' }, `≈ from UGX ${p.price.toLocaleString('en-US')}`)]),
         h('p', { class: 'muted small' }, p.tagline),
         h('ul', null, p.features.map((f) => h('li', null, icon('check'), f))),
         h('a', { href: loggedIn ? '/app/account#plans' : `/signup?plan=${id}`, class: `btn btn-outline btn-block`, 'aria-label': `${current ? 'Current plan' : 'Get started with'} ${p.name}` }, current ? 'Your current plan' : loggedIn ? 'Choose plan' : 'Get started'));
@@ -39,7 +67,7 @@ export function landing() {
   return h('div', null,
     h('section', { class: 'hero' }, h('div', { class: 'container fade-up' },
       h('span', { class: 'pill' }, icon('shield'), 'Verified, ATS-optimized career documents'),
-      h('h1', null, 'A job for everyone.'),
+      typewriter(),
       h('p', { class: 'lead' }, 'CV-Certify understands your experience, reads the room on any job description, and produces recruiter-ready resumes, cover letters, and portfolios — each one verifiable, none of it generic.'),
       h('div', { class: 'row row-wrap', style: 'justify-content:center' },
         h('a', { href: state.user ? '/app' : '/signup', class: 'btn btn-primary btn-lg' }, state.user ? 'Open dashboard' : 'Build your profile', icon('arrow')),

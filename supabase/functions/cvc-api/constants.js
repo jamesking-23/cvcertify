@@ -12,7 +12,7 @@ export const PLANS = {
   professional: {
     id: 'professional',
     name: 'Professional',
-    price: 19,
+    price: 2500, // UGX per month
     tagline: 'For active job seekers.',
     features: ['Unlimited resumes & versions', 'Unlimited AI tailoring', 'Cover letter generator', 'ATS scanner & interview prep'],
     limits: { resumes: Infinity, rewrites: Infinity, letters: Infinity, ats: true, interview: true, roadmap: false, portfolio: false },
@@ -20,7 +20,7 @@ export const PLANS = {
   career: {
     id: 'career',
     name: 'Career+',
-    price: 39,
+    price: 5000, // UGX per month
     tagline: 'Full professional branding suite.',
     features: ['Everything in Professional', 'Portfolio hosting & custom domain', 'Skill gap roadmaps', 'Priority AI assistant'],
     limits: { resumes: Infinity, rewrites: Infinity, letters: Infinity, ats: true, interview: true, roadmap: true, portfolio: true },

@@ -157,7 +157,7 @@ img, svg { display: block; max-width: 100%; }
 .price-card.featured li .icon { color: var(--brand-300); }
 .price-card.featured .btn-outline { background: #fff; color: var(--ink-950); }
 .tier { font-weight: 600; font-size: 14px; }
-.site-footer { border-top: 1px solid var(--ink-100); padding: 40px 0; text-align: center; color: var(--ink-600); font-size: 14px; }
+.site-footer { position: relative; overflow: hidden; border-top: 1px solid var(--ink-100); padding: 40px 0 0; text-align: center; color: var(--ink-600); font-size: 14px; }
 .footer-links { display: flex; gap: 20px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
 .footer-links a:hover { color: var(--ink-950); }
 
@@ -321,3 +321,16 @@ img, svg { display: block; max-width: 100%; }
   @page { margin: 14mm; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Headline typewriter: ghost text reserves the height, live text overlays it in the same grid cell. */
+.hero h1.typewriter { display: grid; justify-items: center; min-height: 1em; }
+.typewriter > * { grid-area: 1 / 1; }
+.tw-ghost { visibility: hidden; }
+.tw-cursor { animation: tw-blink 1s steps(1) infinite; font-weight: 300; margin-left: .04em; }
+@keyframes tw-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tw-cursor { animation: none; } }
+
+/* Oversized cropped wordmark: bottom ~22% is clipped by the footer's overflow. */
+.footer-mark { margin-top: 28px; font-size: 17vw; font-weight: 800; letter-spacing: -.06em; line-height: .8; white-space: nowrap; text-align: center; transform: translateY(22%);
+  background: linear-gradient(180deg, var(--ink-200) 0%, rgba(203, 209, 221, 0) 92%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  pointer-events: none; user-select: none; -webkit-user-select: none; }

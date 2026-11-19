@@ -88,7 +88,8 @@ function marketingShell(content) {
     h('footer', { class: 'site-footer' }, h('div', { class: 'container' },
       h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document')),
       h('div', { class: 'brand', style: 'justify-content:center;margin-bottom:8px' }, icon('shield'), 'CV-Certify'),
-      h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`))));
+      h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`)),
+    h('div', { class: 'footer-mark', 'aria-hidden': 'true' }, 'CV-CERTIFY')));
 }
 
 const NAV = [

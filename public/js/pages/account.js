@@ -2,6 +2,7 @@ import { h, icon, toast, setBusy, modal, confirmDialog } from '../ui.js';
 import { patch, post, del } from '../api.js';
 import { PLANS, PLAN_ORDER } from '../shared/constants.js';
 import { state, setUser, navigate } from '../main.js';
+import { formatPrice } from '../shared/currency.js';
 
 export default function accountPage() {
   const u = state.user;
@@ -26,11 +27,11 @@ export default function accountPage() {
     const btn = h('button', { class: `btn btn-block ${current ? 'btn-ghost' : id === 'professional' ? 'btn-primary' : 'btn-outline'}`, disabled: current, onclick: async () => {
       if (!state.config.selfServePlans) return toast('Online payments are not enabled yet. Please contact support to change plans.', 'error');
       const down = idx < PLAN_ORDER.indexOf(u.plan.id);
-      if (!(await confirmDialog(`Switch to ${p.name}?`, down ? 'Features from your current plan that are not in this one will be locked. Your data is kept.' : `This changes your plan to ${p.name}${p.price ? ` ($${p.price}/mo)` : ''}. Billing is not connected yet, so you will not be charged.`, 'Switch plan'))) return;
+      if (!(await confirmDialog(`Switch to ${p.name}?`, down ? 'Features from your current plan that are not in this one will be locked. Your data is kept.' : `This changes your plan to ${p.name}${p.price ? ` (${formatPrice(p.price)}/mo)` : ''}. Billing is not connected yet, so you will not be charged.`, 'Switch plan'))) return;
       setBusy(btn, true, 'Switching…');
       try { const { user } = await post('/me/plan', { plan: id }); setUser(user); toast(`You are now on ${p.name}.`); navigate('/app/account#plans', { replace: true }); } catch (e) { toast(e.message, 'error'); setBusy(btn, false); }
     } }, current ? 'Current plan' : id === 'starter' ? 'Downgrade' : 'Choose ' + p.name);
-    return h('div', { class: `price-card${current ? '' : ''}`, style: current ? 'border-color:var(--brand-500);box-shadow:var(--focus)' : '' }, h('div', { class: 'row spread' }, h('div', { class: 'tier' }, p.name), current && h('span', { class: 'chip chip-brand' }, 'Current')), h('div', { class: 'price' }, p.price ? [`$${p.price}`, h('small', null, '/mo')] : 'Free'), h('ul', null, p.features.map((f) => h('li', null, icon('check'), f))), btn);
+    return h('div', { class: `price-card${current ? '' : ''}`, style: current ? 'border-color:var(--brand-500);box-shadow:var(--focus)' : '' }, h('div', { class: 'row spread' }, h('div', { class: 'tier' }, p.name), current && h('span', { class: 'chip chip-brand' }, 'Current')), h('div', { class: 'price' }, p.price ? [formatPrice(p.price), h('small', null, '/mo')] : 'Free'), h('ul', null, p.features.map((f) => h('li', null, icon('check'), f))), btn);
   }));
 
   const delBtn = h('button', { class: 'btn btn-danger', onclick: async () => {
