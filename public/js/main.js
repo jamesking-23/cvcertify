@@ -42,10 +42,10 @@ window.addEventListener('cv:signed-out', () => {
 const lazy = (path, fn = 'default') => async (ctx) => (await import(path))[fn](ctx);
 
 const routes = [
-  { re: /^\/$/, public: true, load: lazy('./pages/marketing.js', 'landing'), title: '' },
+  { re: /^\/$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: '' },
   { re: /^\/templates$/, public: true, load: lazy('./pages/marketing.js', 'templatesPage'), title: 'Templates' },
-  { re: /^\/pricing$/, public: true, load: lazy('./pages/marketing.js', 'landing'), title: 'Pricing', scroll: 'pricing' },
-  { re: /^\/features$/, public: true, load: lazy('./pages/marketing.js', 'landing'), title: 'Features', scroll: 'features' },
+  { re: /^\/pricing$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: 'Pricing', scroll: 'pricing' },
+  { re: /^\/features$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: 'Features', scroll: 'features' },
   { re: /^\/login$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'loginPage'), title: 'Sign in' },
   { re: /^\/signup$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'signupPage'), title: 'Create account' },
   { re: /^\/forgot$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'forgotPage'), title: 'Reset password' },
@@ -140,6 +140,7 @@ let renderId = 0;
 async function render() {
   const id = ++renderId;
   for (const fn of leaveHooks.splice(0)) { try { await fn(); } catch { /* ignore */ } }
+  document.body.classList.remove('lp-body');
   const { path, search, anchor } = here();
   const route = routes.find((r) => r.re.test(path));
   if (!route) {

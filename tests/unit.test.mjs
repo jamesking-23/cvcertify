@@ -62,3 +62,25 @@ test('plan limits: resume/rewrite quotas are numbers or null, features are boole
     for (const k of ['ats', 'interview', 'roadmap', 'portfolio']) assert.equal(typeof p.limits[k], 'boolean', `${p.id}.${k}`);
   }
 });
+
+test('letter parsing separates salutation, body and sign-off so each layout can place them', async () => {
+  const { parseLetter, letterParts } = await import('../public/js/preview.js');
+  const text = 'Dear Sir/Madam,\n\nFirst paragraph.\n\nSecond paragraph.\n\nYours faithfully,\nJames Amani';
+  const p = parseLetter(text);
+  assert.equal(p.salutation, 'Dear Sir/Madam,');
+  assert.deepEqual(p.paragraphs, ['First paragraph.', 'Second paragraph.']);
+  assert.equal(p.signed, 'James Amani');
+  const L = letterParts({ text, personal: { fullName: 'James Amani', email: 'j@example.com' }, job: { title: 'Analyst', company: 'Acme' }, date: new Date(2026, 10, 19) });
+  assert.equal(L.subject, 'RE: APPLICATION FOR THE POSITION OF ANALYST');
+  assert.equal(L.closing, 'Yours faithfully,');
+  assert.equal(L.date, '19 November 2026');
+  assert.equal(letterParts({ text: 'Dear Ms Okello,\n\nHi.', job: {} }).closing, 'Yours sincerely,');
+});
+
+test('every template and letter format id is registered, and prices are in UGX', async () => {
+  const { TEMPLATES, LETTER_FORMATS, PLANS } = await import('../public/js/shared/constants.js');
+  for (const id of ['classic', 'modern', 'compact', 'executive', 'academic', 'timeline', 'rail']) assert.ok(TEMPLATES.some((t) => t.id === id), id);
+  assert.deepEqual(LETTER_FORMATS.map((f) => f.id), ['formal', 'right', 'letterhead']);
+  assert.equal(PLANS.professional.price, 2500);
+  assert.equal(PLANS.career.price, 5000);
+});

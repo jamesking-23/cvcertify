@@ -3,7 +3,7 @@
 import { auth, rest, rpc, fn, SbError } from './supabase-lite.js';
 import { ApiError } from './errors.js';
 import { cleanContent, cleanJob, cleanTemplate, cleanCountry, cleanTitle, cleanSlug, text } from './shared/clean.mjs';
-import { emptyContent } from './shared/constants.js';
+import { emptyContent, LETTER_FORMATS } from './shared/constants.js';
 
 const appUrl = (p) => location.origin + location.pathname + '#' + p;
 
@@ -46,7 +46,7 @@ function userView(u) {
 }
 const stale = (r) => !!r.doc_id && r.current_hash !== r.certified_hash;
 const resumeView = (r) => ({ id: r.id, title: r.title, template: r.template, country: r.country, content: r.content, job: r.job || {}, docId: r.doc_id || null, certifiedAt: r.certified_at || null, certifiedHash: r.certified_hash || null, updatedAt: r.updated_at, createdAt: r.created_at });
-const letterView = (l) => ({ id: l.id, title: l.title, text: l.text, job: l.job || {}, resumeId: l.resume_id || null, updatedAt: l.updated_at, createdAt: l.created_at });
+const letterView = (l) => ({ id: l.id, title: l.title, text: l.text, job: l.job || {}, resumeId: l.resume_id || null, format: l.format || 'formal', updatedAt: l.updated_at, createdAt: l.created_at });
 const portfolioView = (p) => ({ enabled: !!p?.enabled, slug: p?.slug || '', headline: p?.headline || '', about: p?.about || '', links: p?.links || [], resumeId: p?.resume_id || null });
 const one = (rows, what) => {
   const r = Array.isArray(rows) ? rows[0] : rows;
@@ -157,7 +157,7 @@ on('POST', /^\/resumes\/([^/]+)\/revoke$/, async ([id]) => { await rpc('cvc_revo
 
 // letters
 on('GET', /^\/letters$/, async () => ({ letters: (await rest('GET', 'cvc_letters', { query: 'select=*&order=updated_at.desc' })).map(letterView) }));
-const letterBody = (b) => ({ title: cleanTitle(b.title, 'Cover letter'), text: text(b.text, 8000), job: cleanJob(b.job), resume_id: b.resumeId || null });
+const letterBody = (b) => ({ title: cleanTitle(b.title, 'Cover letter'), text: text(b.text, 8000), job: cleanJob(b.job), resume_id: b.resumeId || null, format: LETTER_FORMATS.some((f) => f.id === b.format) ? b.format : 'formal' });
 on('POST', /^\/letters$/, async (_, b) => ({ letter: letterView(one(await rest('POST', 'cvc_letters', { prefer: REP, body: letterBody(b) }), 'Letter')) }));
 on('PUT', /^\/letters\/([^/]+)$/, async ([id], b) => ({ letter: letterView(one(await rest('PATCH', 'cvc_letters', { query: eq(id), prefer: REP, body: letterBody(b) }), 'Letter')) }));
 on('DELETE', /^\/letters\/([^/]+)$/, async ([id]) => { await rest('DELETE', 'cvc_letters', { query: eq(id) }); return { ok: true }; });
@@ -233,7 +233,8 @@ export async function downloadFile(path, fallbackName) {
     m = /^\/letters\/([^/]+)\/export$/.exec(path);
     if (m) {
       const l = one(await rest('GET', 'cvc_letters', { query: `select=*&${eq(m[1])}` }), 'Letter');
-      return saveBlob(await lib.letterToDocx({ text: l.text, name: l.title }), `${fileSafe(l.title, 'cover-letter')}.docx`);
+      const src = l.resume_id ? (await rest('GET', 'cvc_resumes', { query: `select=content&${eq(l.resume_id)}` }))[0] : (await rest('GET', 'cvc_profiles', { query: 'select=content' }))[0];
+      return saveBlob(await lib.letterToDocx({ text: l.text, name: l.title, personal: cleanContent(src?.content).personal, job: l.job || {}, format: l.format || 'formal' }), `${fileSafe(l.title, 'cover-letter')}.docx`);
     }
   } catch (e) {
     throw fail(e);

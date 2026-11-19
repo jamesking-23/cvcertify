@@ -48,6 +48,15 @@ export const TEMPLATES = [
   { id: 'modern', name: 'Modern', desc: 'Green accent header with a clean one-column body.', ats: 'High' },
   { id: 'compact', name: 'Compact', desc: 'Dense layout that fits long careers on two pages.', ats: 'High' },
   { id: 'executive', name: 'Executive', desc: 'Refined serif look with a gold rule for senior roles.', ats: 'High' },
+  { id: 'academic', name: 'Academic', desc: 'Shaded header, ruled sections and bordered tables for qualifications and placements. Suits graduates and professional bodies.', ats: 'Good' },
+  { id: 'timeline', name: 'Timeline', desc: 'Dates in a left margin, details on the right. The familiar European CV rhythm.', ats: 'High' },
+  { id: 'rail', name: 'Rail', desc: 'A side rail for contact, skills and languages beside the main story. Reads fast.', ats: 'Good' },
+];
+
+export const LETTER_FORMATS = [
+  { id: 'formal', name: 'Formal application', desc: 'Sender block top left, recipient, bold RE: line. The standard for applications in East Africa and the UK.' },
+  { id: 'right', name: 'Right-aligned sender', desc: 'Sender and date aligned right, recipient on the left, capitalised RE: line.' },
+  { id: 'letterhead', name: 'Letterhead', desc: 'Name as a letterhead with an accent rule. Warmer and more modern.' },
 ];
 
 export const LANGUAGE_LEVELS = ['Native', 'Fluent', 'Advanced', 'Intermediate', 'Basic'];

@@ -4,6 +4,8 @@ import { handleAiError } from '../editor-form.js';
 import { upgradeCard } from './tools.js';
 import { state, onLeave } from '../main.js';
 import { saver } from '../util-client.js';
+import { renderLetter } from '../preview.js';
+import { LETTER_FORMATS } from '../shared/constants.js';
 
 export default async function lettersPage() {
   if (!state.user.plan.limits.letters) return upgradeCard('Cover letters', 'letters');
@@ -19,7 +21,7 @@ export default async function lettersPage() {
   };
 
   const openEditor = (existing) => {
-    const l = existing ? { ...existing, job: { ...existing.job } } : { id: null, title: 'Cover letter', text: '', job: { title: '', company: '', description: '' }, resumeId: resumes[0]?.id || null };
+    const l = existing ? { ...existing, job: { ...existing.job } } : { id: null, title: 'Cover letter', text: '', job: { title: '', company: '', description: '' }, resumeId: resumes[0]?.id || null, format: 'formal' };
     current = l;
     const indicator = h('span', { class: 'save-state' });
     const save = saver(async () => {
@@ -38,6 +40,22 @@ export default async function lettersPage() {
     const tone = h('select', { class: 'select' }, ['professional', 'warm', 'confident', 'concise'].map((t) => h('option', { value: t }, t[0].toUpperCase() + t.slice(1))));
     const body = h('textarea', { class: 'textarea', rows: 18, style: 'font-family:var(--font-serif);font-size:16px;line-height:1.65', placeholder: 'Your letter appears here. You can edit it freely.', oninput: () => { l.text = body.value; save(); } });
     body.value = l.text;
+
+    // Live preview in the chosen format, using the selected resume's contact details.
+    let personal = {};
+    const previewHost = h('div', { class: 'paper-wrap' });
+    const drawPreview = () => clear(previewHost).append(renderLetter({ text: body.value, personal, job: l.job, format: l.format || 'formal' }));
+    const loadPersonal = async () => {
+      try { personal = resumes.length ? (await get('/resumes/' + (rs.value || l.resumeId))).resume.content.personal : (await get('/profile')).content.personal; } catch { personal = {}; }
+      drawPreview();
+    };
+    body.addEventListener('input', drawPreview);
+    jt.addEventListener('input', drawPreview);
+    jc.addEventListener('input', drawPreview);
+    rs.addEventListener('change', loadPersonal);
+    const fmtBtns = LETTER_FORMATS.map((f) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': (l.format || 'formal') === f.id, title: f.desc, onclick: () => { l.format = f.id; fmtBtns.forEach((b, i) => b.setAttribute('aria-pressed', LETTER_FORMATS[i].id === f.id)); fmtNote.textContent = f.desc; drawPreview(); save(); } }, f.name));
+    const fmtNote = h('p', { class: 'hint' }, LETTER_FORMATS.find((f) => f.id === (l.format || 'formal')).desc);
+    loadPersonal();
 
     const gen = h('button', { class: 'btn btn-brand', onclick: async () => {
       if (!resumes.length) return toast('Create a resume first. The letter is written from it.', 'error');
@@ -63,7 +81,7 @@ export default async function lettersPage() {
           l.id && h('button', { class: 'btn btn-danger', onclick: async () => { if (await confirmDialog('Delete this letter?', 'This cannot be undone.', 'Delete', true)) { await del('/letters/' + l.id); letters.splice(letters.findIndex((x) => x.id === l.id), 1); save.flush = async () => {}; listView(); } } }, icon('trash')))),
       h('div', { class: 'editor' },
         h('div', { class: 'card stack' }, h('div', { class: 'form-grid' }, h('div', { class: 'field' }, h('label', null, 'Resume'), rs), h('div', { class: 'field' }, h('label', null, 'Tone'), tone), h('div', { class: 'field' }, h('label', null, 'Job title'), jt), h('div', { class: 'field' }, h('label', null, 'Company'), jc), h('div', { class: 'field span-2' }, h('label', null, 'Job description'), jd)), h('div', null, gen)),
-        h('div', { class: 'card' }, h('div', { class: 'label', style: 'margin-bottom:8px' }, 'Letter'), body)));
+        h('div', { class: 'stack' }, h('div', { class: 'card' }, h('div', { class: 'label', style: 'margin-bottom:8px' }, 'Letter text'), body), h('div', { class: 'card stack' }, h('div', { class: 'label' }, 'Layout'), h('div', { class: 'row row-wrap' }, fmtBtns), fmtNote, previewHost))));
   };
 
   listView();

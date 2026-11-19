@@ -7,7 +7,7 @@ artifact on every run shows the running app. Pushes to `main` that touch `public
 - [x] Marketing site: landing, templates, pricing
 - [x] Accounts on Supabase Auth: sign up, sign in, password change/reset, data deletion
 - [x] Master profile with autosave
-- [x] Resume editor: live preview, 4 templates, 8 country formats, Word export (in the browser), print to PDF
+- [x] Resume editor: live preview, 7 templates (incl. Academic, Timeline, Rail), 3 cover letter layouts, 8 country formats, Word export (in the browser), print to PDF
 - [x] AI writing with offline fallback (Edge Function `cvc-api`): bullets, summary, tailoring, cover letters, interview prep, roadmap, assistant
 - [x] ATS scanner (deterministic)
 - [x] Verifiable document IDs, public verify page, edit detection, revocation

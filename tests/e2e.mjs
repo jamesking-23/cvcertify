@@ -46,6 +46,11 @@ try {
   await page.goto(base + '/');
   await page.getByRole('link', { name: 'Get started' }).first().waitFor();
   assert.match(page.url(), /\/$/);
+  await page.locator('h1.typewriter').waitFor();
+  assert.equal(await page.locator('h1.typewriter').getAttribute('aria-label'), 'A job for everyone.');
+  await page.locator('.desk .chip-lp').nth(4).click(); // switch the hero document to the Academic layout
+  await page.locator('.desk .paper.t-academic').waitFor();
+  await page.locator('.footer-mark').waitFor({ state: 'attached' });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/01-landing.png` });
 
   await page.getByRole('link', { name: 'Get started' }).first().click();
