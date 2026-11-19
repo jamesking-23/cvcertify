@@ -26,6 +26,8 @@ function fail(e) {
   if (e.status === 0) return new ApiError(e.message, 0, 'network');
   const hint = e.hint;
   if (hint === 'quota_exceeded' || hint === 'upgrade_required') return new ApiError(e.message, 402, hint);
+  if (hint === 'forbidden') return new ApiError('You do not have access to this page.', 403, 'forbidden');
+  if (hint === 'bad_code' || hint === 'already_redeemed' || hint === 'higher_plan' || hint === 'rate_limited') return new ApiError(e.message, 400, hint);
   if (hint === 'billing_required') return new ApiError(e.message, 402, hint);
   if (hint === 'not_found') return new ApiError(e.message, 404, 'not_found');
   if (hint === 'unauthenticated' || e.code === 'unauthenticated') return new ApiError('Please sign in to continue.', 401, 'unauthenticated');
@@ -101,6 +103,34 @@ on('DELETE', /^\/me$/, async (_, b) => {
   return { ok: true };
 });
 on('POST', /^\/me\/plan$/, async (_, b) => ({ user: userView(await rpc('cvc_set_plan', { p_plan: String(b.plan) })) }));
+
+// billing: card and mobile-money checkout (server computes the price), redeem codes, history
+const payFn = async (body) => {
+  try { return await fn('cvc-pay', body); } catch (e) {
+    if (e instanceof SbError && e.code === 'payments_off') throw new ApiError(e.message, 400, 'payments_off');
+    if (e instanceof SbError && e.status === 404) throw new ApiError('Online payments are not available right now.', 503, 'unavailable');
+    throw e;
+  }
+};
+on('GET', /^\/billing\/config$/, async () => { try { return await fn('cvc-pay', { task: 'config' }); } catch { return { enabled: false }; } });
+on('POST', /^\/billing\/checkout$/, async (_, b) => payFn({ task: 'checkout', plan: String(b.plan), months: Number(b.months) || 1, returnUrl: location.origin + location.pathname }));
+on('POST', /^\/billing\/verify$/, async (_, b) => ({ result: await payFn({ task: 'verify', txRef: String(b.txRef || '') }), user: userView(await rpc('cvc_me')) }));
+on('GET', /^\/billing\/history$/, async () => ({ payments: await rest('GET', 'cvc_payments', { query: 'select=id,plan,months,amount,currency,status,method,created_at,paid_at&order=created_at.desc&limit=20' }) }));
+on('POST', /^\/billing\/redeem$/, async (_, b) => {
+  const r = await rpc('cvc_redeem', { p_code: String(b.code || '').slice(0, 40) });
+  if (r?.error) throw new ApiError(r.message, 400, r.error);
+  return { user: userView(r) };
+});
+
+// admin console (every call is re-checked in the database: the menu being visible proves nothing)
+on('POST', /^\/admin\/stats$/, async (_, b) => rpc('cvc_admin_stats', { p_days: Number(b.days) || 30 }));
+on('POST', /^\/admin\/users$/, async (_, b) => rpc('cvc_admin_users', { p_q: String(b.q || '').slice(0, 80), p_limit: 25, p_offset: Number(b.offset) || 0 }));
+on('POST', /^\/admin\/payments$/, async () => ({ payments: await rpc('cvc_admin_payments', { p_limit: 100 }) }));
+on('POST', /^\/admin\/codes$/, async () => ({ codes: await rpc('cvc_admin_codes') }));
+on('POST', /^\/admin\/codes\/create$/, async (_, b) => ({ codes: await rpc('cvc_admin_create_codes', { p_plan: String(b.plan), p_days: Number(b.days), p_count: Number(b.count), p_max_uses: Number(b.maxUses) || 1, p_expires_at: b.expiresAt || null, p_note: String(b.note || '').slice(0, 200) }) }));
+on('POST', /^\/admin\/codes\/active$/, async (_, b) => { await rpc('cvc_admin_set_code_active', { p_code: String(b.code), p_active: !!b.active }); return { ok: true }; });
+on('POST', /^\/admin\/grant$/, async (_, b) => { await rpc('cvc_admin_grant', { p_user: String(b.userId), p_plan: String(b.plan), p_days: Number(b.days) || 0 }); return { ok: true }; });
+on('POST', /^\/admin\/audit$/, async () => ({ events: await rpc('cvc_admin_audit', { p_limit: 100 }) }));
 
 // auth
 on('POST', /^\/auth\/login$/, async (_, b) => {

@@ -36,3 +36,27 @@ Pushes to `main` publish `public/` to GitHub Pages (Settings > Pages > Source: G
 
 ## Known limits
 Payments are not connected: plan changes are free self-serve while `cvc_settings.allow_self_serve_plan` is true. QR codes and custom portfolio domains are not built yet. See `ROADMAP.md`.
+
+
+## Going live: payments, redeem codes and the admin console
+
+**1. Secrets** (Supabase dashboard, Edge Functions, Secrets; never commit them):
+
+| Secret | Used by | Purpose |
+|---|---|---|
+| `FLW_SECRET_KEY` | `cvc-pay`, `cvc-webhook` | Flutterwave secret key. Without it checkout is switched off and only redeem codes work. |
+| `FLW_SECRET_HASH` | `cvc-webhook` | The "secret hash" you type into Flutterwave's webhook settings. |
+| `ANTHROPIC_API_KEY` | `cvc-api` | Real generative writing. Without it the built-in profile-aware writer is used. |
+| `ALLOWED_ORIGINS` | `cvc-pay` | Optional. Sites allowed to receive customers after payment. Defaults to the GitHub Pages site and localhost. |
+
+**2. Flutterwave webhook URL:** `https://dgvaoswcbzzcyaentjwr.supabase.co/functions/v1/cvc-webhook`
+
+**3. First admin:** sign up on the site, then run once in the Supabase SQL editor:
+
+```sql
+insert into public.cvc_admins (user_id) select id from auth.users where email = 'you@example.com';
+```
+
+The **Admin** link then appears in the app sidebar. Plans are granted by payment, redeem code or admin only (`allow_self_serve_plan` is off).
+
+Prices live in `cvc_plan_price()` in the database; the browser only displays them. Paid access lasts 30 days per month bought and does not renew by itself.

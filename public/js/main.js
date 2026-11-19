@@ -1,6 +1,6 @@
 import { h, icon, clear, toast, setTitle } from './ui.js';
 import { get, post, ApiError } from './api.js';
-import { auth } from './supabase-lite.js';
+import { auth, rpc } from './supabase-lite.js';
 import { PLANS } from './shared/constants.js';
 
 const BUILD = document.querySelector('meta[name="cvc-build"]')?.content || 'dev';
@@ -63,6 +63,7 @@ const routes = [
   { re: /^\/app\/roadmap$/, app: 'roadmap', load: lazy('./pages/tools.js', 'roadmapPage'), title: 'Skill roadmap' },
   { re: /^\/app\/assistant$/, app: 'assistant', load: lazy('./pages/assistant.js'), title: 'AI assistant' },
   { re: /^\/app\/portfolio$/, app: 'portfolio', load: lazy('./pages/portfolio.js'), title: 'Portfolio' },
+  { re: /^\/app\/admin$/, app: 'admin', load: lazy('./pages/admin.js'), title: 'Admin' },
   { re: /^\/app\/account$/, app: 'account', load: lazy('./pages/account.js'), title: 'Account & plan' },
 ];
 
@@ -113,6 +114,7 @@ function appShell(content, active) {
     NAV.map(([id, href, ic, label, feat]) => h('a', { href, class: 'side-link', 'aria-current': active === id ? 'page' : null, onclick: () => side.classList.remove('open') || scrim.remove() }, icon(ic), label, feat && !limits[feat] && icon('lock', 'lock'))),
     h('div', { class: 'side-spacer' }),
     h('a', { href: '/verify', class: 'side-link' }, icon('qr'), 'Verify a document'),
+    u.isAdmin && h('a', { href: '/app/admin', class: 'side-link', 'aria-current': active === 'admin' ? 'page' : null }, icon('shield'), 'Admin'),
     h('a', { href: '/app/account', class: 'side-link', 'aria-current': active === 'account' ? 'page' : null }, icon('settings'), 'Account & plan'),
     h('div', { class: 'plan-box' },
       h('div', { class: 'row spread' }, h('strong', null, u.plan.name), h('a', { href: '/app/account#plans', class: 'eyebrow small' }, u.plan.id === 'career' ? 'Manage' : 'Upgrade')),
@@ -134,6 +136,28 @@ export async function refreshUser() {
   const { user } = await get('/me');
   state.user = user;
   return user;
+}
+
+/* ---------- visit counting ---------- */
+// Anonymous and light: a random id kept in this browser, the page, and the referring site's name. No cookies, no IP.
+const visitorId = (() => {
+  try {
+    let v = localStorage.getItem('cvc_vid');
+    if (!v) { v = (crypto.randomUUID?.() || String(Math.random()).slice(2) + Date.now()).replace(/-/g, ''); localStorage.setItem('cvc_vid', v); }
+    return v;
+  } catch { return null; }
+})();
+const tidyPath = (p) => p.replace(/^\/app\/resumes\/[^/]+$/, '/app/resumes/:id').replace(/^\/verify\/[^/]+$/, '/verify/:id').replace(/^\/p\/[^/]+$/, '/p/:slug');
+function track(path) {
+  if (!visitorId || navigator.doNotTrack === '1' || path === '/app/admin') return;
+  let ref = '';
+  try {
+    if (!sessionStorage.getItem('cvc_ref_sent')) {
+      sessionStorage.setItem('cvc_ref_sent', '1');
+      if (document.referrer) { const u = new URL(document.referrer); if (u.origin !== location.origin) ref = u.hostname.replace(/^www\./, ''); }
+    }
+  } catch { /* ignore */ }
+  rpc('cvc_track', { p_visitor: visitorId, p_kind: 'view', p_path: tidyPath(path), p_ref: ref }, { anon: true }).catch(() => {});
 }
 
 /* ---------- render loop ---------- */
@@ -159,6 +183,7 @@ async function render() {
   try {
     const node = await route.load({ params, user: state.user, navigate, config: state.config, query: new URLSearchParams(search) });
     if (id !== renderId) return; // a newer navigation won
+    track(path);
     const shell = route.bare ? node : route.app ? appShell(node, route.app) : marketingShell(node);
     clear(root).append(shell);
     const target = route.scroll || new URLSearchParams(search).get('s') || anchor;
@@ -187,7 +212,22 @@ export const planName = (id) => PLANS[id]?.name || id;
     state.config = cfg;
     state.user = me.user;
   } catch { /* render anyway */ }
-  if (back?.error) { history.replaceState({}, '', location.pathname + '#/login'); toast(back.error, 'error'); }
+  // Returning from the payment page: confirm with the server, then show the result on the Account page.
+  const q = new URLSearchParams(location.search);
+  if (q.get('cvcpay') && q.get('tx_ref')) {
+    const txRef = q.get('tx_ref');
+    history.replaceState({}, '', location.pathname + '#/app/account#plans');
+    if (state.user) {
+      try {
+        const { result, user } = await post('/billing/verify', { txRef });
+        state.user = user;
+        if (result.status === 'succeeded') toast(`Payment received. You are now on ${user.plan.name}.`);
+        else if (result.status === 'pending') toast('Your payment is still being confirmed. This page will update once it goes through.', 'info');
+        else if (result.status === 'mismatch') toast('The amount received did not match. Please contact support with your payment reference.', 'error');
+        else toast('The payment was not completed, so you have not been charged.', 'error');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+  } else if (back?.error) { history.replaceState({}, '', location.pathname + '#/login'); toast(back.error, 'error'); }
   else if (back?.type === 'recovery') history.replaceState({}, '', location.pathname + '#/reset');
   else if (back && state.user) history.replaceState({}, '', location.pathname + '#/app');
   render();
