@@ -23,6 +23,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp build version
+        run: sed -i "s/name=\"cvc-build\" content=\"dev\"/name=\"cvc-build\" content=\"${GITHUB_SHA::7}\"/" public/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

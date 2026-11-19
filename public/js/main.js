@@ -3,6 +3,7 @@ import { get, post, ApiError } from './api.js';
 import { auth } from './supabase-lite.js';
 import { PLANS } from './shared/constants.js';
 
+const BUILD = document.querySelector('meta[name="cvc-build"]')?.content || 'dev';
 export const state = { user: null, config: {} };
 const root = document.getElementById('root');
 let leaveHooks = [];
@@ -88,7 +89,7 @@ function marketingShell(content) {
     h('footer', { class: 'site-footer' }, h('div', { class: 'container' },
       h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document')),
       h('div', { class: 'brand', style: 'justify-content:center;margin-bottom:8px' }, icon('shield'), 'CV-Certify'),
-      h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`)),
+      h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`, BUILD !== 'dev' && h('span', { class: 'build', title: 'Site version. Use it to check you are not seeing a cached copy.' }, ` · v${BUILD}`))),
     h('div', { class: 'footer-mark', 'aria-hidden': 'true' }, 'CV-CERTIFY')));
 }
 
