@@ -4,6 +4,7 @@ import { auth, rest, rpc, fn, SbError } from './supabase-lite.js';
 import { ApiError } from './errors.js';
 import { cleanContent, cleanJob, cleanTemplate, cleanCountry, cleanTitle, cleanSlug, text } from './shared/clean.mjs';
 import { emptyContent, LETTER_FORMATS } from './shared/constants.js';
+import { detectCountry } from './shared/currency.js';
 
 const appUrl = (p) => location.origin + location.pathname + '#' + p;
 
@@ -55,8 +56,21 @@ const one = (rows, what) => {
 };
 const REP = 'return=representation';
 const eq = (id) => `id=eq.${encodeURIComponent(id)}`;
-const meUser = async () => userView(await rpc('cvc_ensure_account'));
-const uid = () => auth.user()?.id;
+const meUser = async () => {
+  let u = await rpc('cvc_ensure_account');
+  // A brand-new account starts with the default format. Switch it to the one that fits where the person is.
+  const fresh = Date.now() - new Date(u.createdAt).getTime() < 5 * 60 * 1000;
+  const guess = detectCountry();
+  if (fresh && u.country === 'US' && guess !== 'US') {
+    try { await rest('PATCH', 'cvc_accounts', { query: `user_id=eq.${uid()}`, body: { country: guess } }); u = await rpc('cvc_me'); } catch { /* keep the default */ }
+  }
+  return userView(u);
+};
+const uid = () => {
+  const id = auth.userId();
+  if (!id) throw new ApiError('Please sign in to continue.', 401, 'unauthenticated');
+  return id;
+};
 const patchPick = (b, map) => Object.fromEntries(Object.entries(map).filter(([k]) => b[k] !== undefined).map(([k, f]) => f(b[k])));
 
 /* ---------- router ---------- */
@@ -80,7 +94,7 @@ on('PATCH', /^\/me$/, async (_, b) => {
   return { user: userView(await rpc('cvc_me')) };
 });
 on('DELETE', /^\/me$/, async (_, b) => {
-  const email = auth.user()?.email || (await rpc('cvc_me'))?.email || '';
+  const email = (await rpc('cvc_me'))?.email || auth.user()?.email || '';
   if (String(b.confirm || '').trim().toLowerCase() !== email.toLowerCase()) throw new ApiError('Type your email address exactly to confirm.', 400, 'confirm_mismatch');
   await rpc('cvc_delete_my_data');
   await auth.signOut();

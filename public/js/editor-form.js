@@ -85,18 +85,29 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
     field('Website / portfolio', bound(p, 'website', change, { placeholder: 'yourname.com' })),
     field('LinkedIn', bound(p, 'linkedin', change, { placeholder: 'linkedin.com/in/…' })),
     field('GitHub', bound(p, 'github', change, { placeholder: 'github.com/…' })),
-    field('Date of birth', bound(p, 'dob', change, { placeholder: 'e.g. 12 May 1998' }), { hint: rules.dob ? `Shown on ${rules.name} formats.` : `Not shown on ${rules.name} formats.` }),
+    field('Date of birth', bound(p, 'dob', change, { type: 'date', min: '1930-01-01', max: new Date().toISOString().slice(0, 10), autocomplete: 'bday' }), { hint: rules.dob ? `Shown on ${rules.name} formats.` : `Not shown on ${rules.name} formats.` }),
     field('Nationality', bound(p, 'nationality', change), { hint: rules.nationality ? `Shown on ${rules.name} formats.` : `Not shown on ${rules.name} formats.` }));
 
   const summary = () => {
     const ta = bound(c, 'summary', change, { rows: 4, placeholder: '2–4 sentences: who you are, what you do best, what you want next.' }, 'textarea');
     const btn = h('button', { type: 'button', class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: async () => {
       setBusy(btn, true, 'Writing…');
-      try { ta.value = c.summary = await ai.summary(); change(); toast('Summary updated. Review and edit it.'); } catch (e) { handleAiError(e); }
+      try { showOptions(await ai.summary()); } catch (e) { handleAiError(e); }
       setBusy(btn, false);
       btn.prepend(icon('sparkles', 'icon-sm'));
-    } }, icon('sparkles', 'icon-sm'), c.summary ? 'Improve with AI' : 'Write with AI');
-    return [ta, ai && btn];
+    } }, icon('sparkles', 'icon-sm'), c.summary ? 'Suggest other summaries' : 'Suggest summaries');
+    // Several different options per request, shown side by side so the person chooses (and edits) rather than accepting one.
+    const panel = h('div', { class: 'suggest', hidden: true });
+    const showOptions = (out) => {
+      clear(panel).append(
+        h('div', { class: 'suggest-head' }, h('b', null, `${out.options.length} options`), h('span', { class: 'muted small' }, out.mode === 'ai' ? 'Written from your profile. Edit anything that is not true for you.' : 'Offline writer: built from your profile, different on every request. Edit anything that is not true for you.')),
+        ...out.options.map((o) => h('div', { class: 'suggest-card' }, h('div', { class: 'suggest-meta' }, h('span', { class: 'tag' }, o.label), h('span', { class: 'muted small' }, `${o.words || o.text.split(/\s+/).length} words`)), h('p', null, o.text),
+          h('button', { type: 'button', class: 'btn btn-outline btn-sm', onclick: () => { ta.value = c.summary = o.text; change(); toast('Summary applied.'); } }, 'Use this'))),
+        h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => btn.click() }, icon('sparkles', 'icon-sm'), 'Show me different ones'));
+      panel.hidden = false;
+      panel.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    };
+    return [ta, ai && btn, ai && panel];
   };
 
   const experience = () => listEditor({
@@ -112,14 +123,25 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
       const btn = h('button', { type: 'button', class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: async () => {
         if (!e.bullets.length) return toast('Write a rough bullet first, then let AI polish it.', 'error');
         setBusy(btn, true, 'Improving…');
-        try { e.bullets = await ai.bullets(e); ta.value = e.bullets.join('\n'); change(); toast('Bullets rewritten. Check them for accuracy.'); } catch (er) { handleAiError(er); }
+        try {
+          const out = await ai.bullets(e);
+          variants = out.variants || out.bullets.map((b) => [b]);
+          version = 0;
+          apply();
+          toast('Bullets rewritten. Check them for accuracy.');
+        } catch (er) { handleAiError(er); }
         setBusy(btn, false);
         btn.prepend(icon('sparkles', 'icon-sm'));
       } }, icon('sparkles', 'icon-sm'), 'Improve bullets');
+      // Each bullet comes back in up to three versions. Cycling is free and does not use your AI quota.
+      let variants = null;
+      let version = 0;
+      const apply = () => { e.bullets = variants.map((v) => v[version % v.length]); ta.value = e.bullets.join('\n'); change(); another.hidden = !variants.some((v) => v.length > 1); };
+      const another = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', hidden: true, onclick: () => { version++; apply(); } }, 'Show another version');
       return [
         h('div', { class: 'form-grid' }, field('Job title', bound(e, 'role', change)), field('Company', bound(e, 'company', change)), field('Location', bound(e, 'location', change)), h('div'), field('Start', monthInput(e, 'start', change)), field('End', end),
           h('label', { class: 'check span-2' }, cur, 'I currently work here')),
-        field('Achievements', ta, { hint: 'Start with a strong verb. Add numbers where you honestly can.' }), ai && btn];
+        field('Achievements', ta, { hint: 'Start with a strong verb. Add numbers where you honestly can.' }), ai && h('div', { class: 'row row-wrap' }, btn, another)];
     },
   });
 

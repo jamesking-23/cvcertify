@@ -20,6 +20,24 @@ export function localCurrency() {
   return REGION_CCY[region] || 'UGX';
 }
 
+// Best guess of the CV format a person needs, from their time zone and language. Africa gets the African format.
+export function detectCountry() {
+  let zone = '', region = '';
+  try {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    for (const l of navigator.languages || [navigator.language]) { const r = new Intl.Locale(l).region; if (r) { region = r; break; } }
+  } catch { /* use defaults */ }
+  if (zone.startsWith('Africa/') && zone !== 'Africa/Cairo') return 'AF';
+  if (zone === 'Africa/Cairo' || /^Asia\/(Dubai|Riyadh|Qatar|Kuwait|Muscat|Bahrain|Baghdad|Amman|Beirut)/.test(zone)) return 'ME';
+  if (/^Asia\/(Kolkata|Calcutta)$/.test(zone)) return 'IN';
+  if (/^(Australia|Pacific\/Auckland)/.test(zone)) return 'AU';
+  if (zone === 'Europe/London' || region === 'GB') return 'UK';
+  if (zone.startsWith('Europe/')) return 'EU';
+  if (/^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina)$/.test(zone) || region === 'CA') return 'CA';
+  if (REGION_CCY[region] === 'UGX' || ['UG', 'KE', 'TZ', 'RW', 'NG', 'GH', 'ZA', 'ET', 'ZM'].includes(region)) return 'AF';
+  return 'US';
+}
+
 export function formatPrice(ugx, currency = localCurrency()) {
   const value = ugx * RATES[currency];
   const digits = value < 100 ? 2 : 0;

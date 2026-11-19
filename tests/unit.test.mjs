@@ -41,7 +41,7 @@ test('cleanContent drops unknown fields, caps sizes and sanitises dates', () => 
 test('basic-mode AI never invents facts', async () => {
   const { bullets } = await ai.rewriteBullets({ bullets: ['responsible for the till', 'helped customers'], role: 'Cashier', company: 'Shop' });
   assert.equal(bullets[0], 'Managed the till.');
-  assert.equal(bullets[1], 'Supported customers.');
+  assert.match(bullets[1], /^(Helped|Supported|Assisted)\b.*customers\.$/);
 });
 
 /* ---------- API integration (in-process, file db) ---------- */
@@ -83,4 +83,44 @@ test('every template and letter format id is registered, and prices are in UGX',
   assert.deepEqual(LETTER_FORMATS.map((f) => f.id), ['formal', 'right', 'letterhead']);
   assert.equal(PLANS.professional.price, 2500);
   assert.equal(PLANS.career.price, 5000);
+});
+
+// ---- AI writer (offline engine) ----
+const { emptyContent } = await import('../supabase/functions/cvc-api/constants.js');
+const grad = () => {
+  const c = emptyContent();
+  c.personal.fullName = 'Mary Achieng'; c.personal.headline = 'Data Analyst';
+  c.education = [{ school: 'Makerere University', degree: 'BSc', field: 'Statistics', start: '2021-08', end: '2025-06', details: '' }];
+  c.skills = ['Excel', 'SQL', 'R'];
+  c.projects = [{ name: 'Boda boda demand dashboard', tech: 'Power BI', description: 'Visualised ride demand by hour' }];
+  return c;
+};
+const AIJOB = { title: 'Data Analyst', company: 'Lakeshore Freight', description: 'We need a data analyst with SQL, Excel and dashboard skills to report weekly KPIs.' };
+
+test('cover letter never claims work history the candidate does not have', async () => {
+  for (const tone of ['professional', 'warm', 'confident', 'concise']) {
+    for (let i = 0; i < 5; i++) {
+      const { letter } = await ai.writeCoverLetter({ content: grad(), job: AIJOB, tone, country: 'AF' });
+      assert.ok(!/I worked as|years of experience|my previous role|in my role at/i.test(letter), letter);
+      assert.ok(/Makerere|Statistics/.test(letter), 'should lean on education');
+    }
+  }
+});
+
+test('summary suggestions come in several labelled lengths and vary between requests', async () => {
+  const seen = new Set();
+  for (let i = 0; i < 4; i++) {
+    const out = await ai.writeSummary({ content: grad(), job: AIJOB });
+    assert.ok(out.options.length >= 4);
+    assert.ok(out.options.every((o) => o.label && o.text && o.words > 5));
+    assert.ok(Math.max(...out.options.map((o) => o.words)) > Math.min(...out.options.map((o) => o.words)) + 8, 'short and long mix');
+    out.options.forEach((o) => seen.add(o.text));
+  }
+  assert.ok(seen.size >= 12, `only ${seen.size} distinct summaries`);
+});
+
+test('bullet rewrite returns grammatical variants without inventing numbers', async () => {
+  const out = await ai.rewriteBullets({ bullets: ['Responsible for dispatch scheduling', 'helped reduce customer complaints'], role: 'x', company: 'y' });
+  assert.equal(out.variants.length, 2);
+  for (const v of out.variants.flat()) { assert.ok(!/\d/.test(v), v); assert.ok(!/^responsible\b/i.test(v), v); }
 });

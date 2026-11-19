@@ -12,8 +12,8 @@ export default async function profilePage() {
   onLeave(() => save.flush());
 
   const ai = {
-    summary: async () => (await post('/ai/summary', { content })).summary,
-    bullets: async (e) => (await post('/ai/bullets', { bullets: e.bullets, role: e.role, company: e.company })).bullets,
+    summary: async () => post('/ai/summary', { content }),
+    bullets: async (e) => post('/ai/bullets', { bullets: e.bullets, role: e.role, company: e.company }),
   };
 
   const countrySel = h('select', { class: 'select', 'aria-label': 'Default country format', style: 'max-width:260px', onchange: async () => {

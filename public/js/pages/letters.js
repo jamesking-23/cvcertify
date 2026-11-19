@@ -67,7 +67,7 @@ export default async function lettersPage() {
         const out = await post('/ai/letter', { content: resume.content, job: l.job, tone: tone.value, country: resume.country });
         body.value = l.text = out.letter;
         save();
-        if (out.mode === 'basic') toast('Basic template used. Add an AI key for a fully tailored letter.');
+        if (out.mode === 'basic') toast('Draft written from your profile. Read it through and make it yours.');
       } catch (e) { handleAiError(e); }
       setBusy(gen, false);
       gen.prepend(icon('sparkles'));

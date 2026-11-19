@@ -81,8 +81,8 @@ export async function editor({ params }) {
 
   /* ---- AI hooks ---- */
   const ai = {
-    summary: async () => (await post('/ai/summary', { content, job: job.description ? job : null })).summary,
-    bullets: async (e) => (await post('/ai/bullets', { bullets: e.bullets, role: e.role, company: e.company, job: job.description ? job : null })).bullets,
+    summary: async () => post('/ai/summary', { content, job: job.description ? job : null }),
+    bullets: async (e) => post('/ai/bullets', { bullets: e.bullets, role: e.role, company: e.company, job: job.description ? job : null }),
   };
 
   /* ---- panel 0: content ---- */

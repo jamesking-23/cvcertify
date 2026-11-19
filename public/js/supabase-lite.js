@@ -70,6 +70,13 @@ async function authed(path, opts = {}) {
 const here = () => location.origin + location.pathname;
 export const auth = {
   user: () => session?.user || null,
+  // The id comes from the access token itself, so it is right even when the session was restored from an email link or OAuth redirect.
+  userId() {
+    try {
+      const b = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(decodeURIComponent(escape(atob(b + '='.repeat((4 - (b.length % 4)) % 4))))).sub || null;
+    } catch { return null; }
+  },
   hasSession: () => !!session,
   settings: () => raw('/auth/v1/settings'),
   async signUp(email, password, name) {

@@ -3,6 +3,12 @@
 import { h, icon } from './ui.js';
 import { COUNTRIES, dateRange } from './shared/constants.js';
 
+// Dates of birth are stored as YYYY-MM-DD (from the date picker) and shown as "14 March 1998". Older free-text values pass through.
+const prettyDate = (v) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+  if (!m) return v || '';
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+};
 const eduTitle = (e) => `${e.degree || ''}${e.field ? ' in ' + e.field : ''}`;
 const certLine = (e) => `${e.name}${e.issuer ? ' – ' + e.issuer : ''}${e.year ? ' (' + e.year + ')' : ''}`;
 const langLine = (l) => `${l.name}${l.level ? ' (' + l.level + ')' : ''}`;
@@ -15,7 +21,7 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
   const row = (l, r) => h('div', { class: 'r' }, h('span', null, l), h('span', null, r || ''));
   const contactBits = [p.email, p.phone, p.location, p.website, p.linkedin, p.github].filter(Boolean);
   const contact = contactBits.join('  ·  ');
-  const personalBits = [rules.dob && p.dob ? `Date of birth: ${p.dob}` : '', rules.nationality && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
+  const personalBits = [rules.dob && p.dob ? `Date of birth: ${prettyDate(p.dob)}` : '', rules.nationality && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
   const personal = personalBits.join('  ·  ');
   const showRefs = rules.referees && c.referees?.length > 0;
   const bullets = (e) => e.bullets?.length > 0 && h('ul', null, e.bullets.map((b) => h('li', null, b)));
