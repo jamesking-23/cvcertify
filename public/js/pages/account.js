@@ -54,15 +54,15 @@ async function manualModal(planId, months, nets) {
   const ok = await modal({
     title: 'Pay by mobile money',
     body: h('div', { class: 'stack' },
-      h('ol', { class: 'muted', style: 'margin:0;padding-left:18px;display:grid;gap:6px' }, h('li', null, 'Choose your network and send the amount below.'), h('li', null, 'Wait for the confirmation SMS and copy the transaction ID.'), h('li', null, 'Enter it here. We confirm it, usually the same day, and your plan switches on.')),
+      h('ol', { class: 'muted', style: 'margin:0;padding-left:18px;display:grid;gap:6px' }, h('li', null, 'Choose your network and send the amount below.'), h('li', null, 'Wait for the confirmation SMS and copy the transaction ID.'), h('li', null, 'Enter it here. Your plan switches on as soon as we see the payment, which is often within seconds.')),
       h('div', { class: 'field' }, h('label', null, 'Network'), network), to,
       h('div', { class: 'field' }, h('label', null, 'Your phone number'), phone), h('div', { class: 'field' }, h('label', null, 'Transaction ID'), ref)),
     actions: [{ label: 'Cancel', value: false }, { label: 'I have paid', value: true, class: 'btn-primary' }],
   });
   if (!ok) return;
   try {
-    await post('/billing/manual', { plan: planId, months, network: network.value, phone: phone.value, ref: ref.value });
-    toast('Thank you. We will confirm your payment shortly and switch your plan on.');
+    const r = await post('/billing/manual', { plan: planId, months, network: network.value, phone: phone.value, ref: ref.value });
+    if (r.approved && r.user) { setUser(r.user); toast(`Payment confirmed. You are now on ${r.user.plan.name} until ${fmtDate(r.user.plan.expiresAt)}.`); } else toast('Thank you. We will confirm your payment shortly and switch your plan on.');
     navigate('/app/account#plans', { replace: true });
   } catch (e) {
     toast(e.message, 'error');

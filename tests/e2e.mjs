@@ -10,7 +10,7 @@ const server = createServer();
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
 
-const db = { manualRows: [], onlineOff: false, user: null, profile: null, resumes: [], admin: false, plan: 'starter', expires: null, codes: [] };
+const db = { auto: false, manualRows: [], onlineOff: false, user: null, profile: null, resumes: [], admin: false, plan: 'starter', expires: null, codes: [] };
 const json = (route, status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
 const emptyProfile = (name, email) => ({ personal: { fullName: name, headline: '', email, phone: '', location: '', website: '', linkedin: '', github: '', dob: '', nationality: '' }, summary: '', experience: [], education: [], projects: [], skills: [], certifications: [], languages: [], referees: [] });
 const PAID = { resumes: 1e12, rewrites: 1e12, letters: true, ats: true, interview: true, roadmap: false, portfolio: false };
@@ -59,6 +59,8 @@ await ctx.route('https://dgvaoswcbzzcyaentjwr.supabase.co/**', async (route) => 
     db.manualRows.push({ id: 'm1', txRef: 'cvm_x', email: db.user.email, plan: body.p_plan, months: body.p_months, amount: 2500 * body.p_months, currency: 'UGX', status: 'pending', method: body.p_network, provider: 'manual', providerRef: body.p_ref.replace(/[^A-Za-z0-9]/g, '').toUpperCase(), payerPhone: body.p_phone, createdAt: new Date().toISOString() });
     return json(route, 200, { id: 'm1', amount: 2500 * body.p_months });
   }
+  if (p === '/rest/v1/rpc/cvc_admin_auto_status') return json(route, 200, { enabled: db.auto, lastSmsAt: null, sms24h: 0, auto24h: 0 });
+  if (p === '/rest/v1/rpc/cvc_admin_set_auto') { db.auto = body.p_enabled; return json(route, 200, null); }
   if (p === '/rest/v1/rpc/cvc_admin_payments') return json(route, 200, db.manualRows);
   if (p === '/rest/v1/rpc/cvc_admin_review_payment') { db.manualRows = []; return json(route, 200, null); }
   if (p === '/rest/v1/rpc/cvc_admin_codes') return json(route, 200, db.codes);
@@ -150,6 +152,9 @@ try {
   await page.getByText('Visitors per day').waitFor();
   await page.getByText('google.com').waitFor();
   await page.getByRole('tab', { name: 'Payments' }).click();
+  await page.getByText('Automatic confirmation').waitFor();
+  await page.getByRole('button', { name: 'Turn on' }).click();
+  await page.getByText('Automatic confirmation is on.').waitFor();
   await page.getByText('waiting for you').waitFor();
   await page.getByRole('button', { name: 'Approve', exact: true }).click();
   await page.getByRole('button', { name: 'Approve and grant plan' }).click();

@@ -108,13 +108,31 @@ async function payments() {
   };
   const waiting = rows.filter((p) => p.provider === 'manual' && p.status === 'pending');
   return h('div', { class: 'stack' },
+    await autoCard(),
     waiting.length ? h('div', { class: 'card stack', style: 'border-color:var(--gold-500,#c9a227)' }, h('h3', null, `${waiting.length} mobile money payment${waiting.length > 1 ? 's' : ''} waiting for you`),
-      waiting.map((p) => h('div', { class: 'row spread' }, h('div', null, h('b', null, `${ugx(p.amount)} · ${p.method === 'airtel' ? 'Airtel' : 'MTN'}`), h('div', { class: 'small muted' }, `${p.email} · from ${p.payerPhone} · ID ${p.providerRef} · ${fmtDate(p.createdAt)}`)),
+      waiting.map((p) => h('div', { class: 'row spread' }, h('div', null, h('b', null, `${ugx(p.amount)} · ${p.method === 'airtel' ? 'Airtel' : 'MTN'} `, p.smsSeen ? h('span', { class: 'chip chip-brand' }, 'Seen on your phone') : null), h('div', { class: 'small muted' }, `${p.email} · from ${p.payerPhone} · ID ${p.providerRef} · ${fmtDate(p.createdAt)}`)),
         h('div', { class: 'row' }, h('button', { class: 'btn btn-primary btn-sm', onclick: () => review(p, true) }, 'Approve'), h('button', { class: 'btn btn-outline btn-sm', onclick: () => review(p, false) }, 'Reject'))))) : null,
     h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
       h('thead', null, h('tr', null, ['Date', 'Customer', 'Plan', 'Amount', 'Method', 'Status', 'Reference'].map((x) => h('th', null, x)))),
       h('tbody', null, rows.map((p) => h('tr', null, h('td', null, fmtDate(p.paidAt || p.createdAt)), h('td', null, p.email || '—'), h('td', null, `${p.plan} · ${p.months} mo`), h('td', null, ugx(p.amount)), h('td', null, p.provider === 'manual' ? `Manual ${p.method}` : (p.method || '—')),
         h('td', null, h('span', { class: `chip ${p.status === 'succeeded' ? 'chip-brand' : p.status === 'pending' ? 'chip-gold' : ''}` }, p.status)), h('td', { class: 'small muted' }, p.providerRef || p.txRef)))))));
+}
+
+async function autoCard() {
+  const st = await post('/admin/auto', {});
+  const card = h('div', { class: 'card stack' });
+  const paint = (s) => {
+    const last = s.lastSmsAt ? new Date(s.lastSmsAt) : null;
+    const stale = !last || Date.now() - last.getTime() > 3 * 864e5;
+    clear(card).append(
+      h('div', { class: 'row spread' }, h('div', null, h('h3', null, 'Automatic confirmation'), h('p', { class: 'muted small' }, 'Your phone forwards the MTN and Airtel “money received” messages here. When one matches what a customer entered, their plan switches on by itself.')),
+        h('button', { class: `btn ${s.enabled ? 'btn-outline' : 'btn-primary'}`, onclick: async () => { try { paint(await post('/admin/auto', { enabled: !s.enabled })); toast(s.enabled ? 'Automatic confirmation is off.' : 'Automatic confirmation is on.'); } catch (e) { toast(e.message, 'error'); } } }, s.enabled ? 'Turn off' : 'Turn on')),
+      h('div', { class: 'row small' }, h('span', { class: `chip ${s.enabled ? 'chip-brand' : ''}` }, s.enabled ? 'On' : 'Off'), h('span', { class: 'muted' }, last ? `Last message from your phone: ${last.toLocaleString()} · ${s.sms24h} in the last 24 hours · ${s.auto24h} confirmed automatically` : 'No message has reached us from your phone yet.')),
+      stale && !s.enabled ? h('p', { class: 'muted small' }, 'Set up the SMS forwarder on your phone first (see the README), send yourself a test payment, then turn this on.') : null,
+      stale && s.enabled ? h('div', { class: 'alert alert-warn' }, icon('alert'), 'Your phone has not forwarded a message for a while. Check that the forwarding app is running, or approve payments by hand below.') : null);
+  };
+  paint(st);
+  return card;
 }
 
 async function codes() {

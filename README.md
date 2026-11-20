@@ -60,3 +60,18 @@ insert into public.cvc_admins (user_id) select id from auth.users where email = 
 The **Admin** link then appears in the app sidebar. Plans are granted by payment, redeem code or admin only (`allow_self_serve_plan` is off).
 
 Prices live in `cvc_plan_price()` in the database; the browser only displays them. Paid access lasts 30 days per month bought and does not renew by itself.
+
+
+## Automatic confirmation of manual mobile money (SMS forwarding)
+
+Customers pay your MTN/Airtel number and enter the transaction ID. Your phone forwards the "money received" SMS to the `cvc-sms` Edge Function, and the database confirms the payment when the **transaction ID and the exact amount** match. It works in either order (SMS first or customer first).
+
+1. Secret `SMS_WEBHOOK_KEY` = a long random string (Supabase, Edge Functions, Secrets).
+2. On the Android phone that holds the SIMs, install an SMS-to-webhook forwarder app (any app that can POST incoming SMS to a URL).
+   - URL: `https://dgvaoswcbzzcyaentjwr.supabase.co/functions/v1/cvc-sms?key=YOUR_SMS_WEBHOOK_KEY`
+   - Method POST, body JSON like `{"from": "{{sender}}", "message": "{{message}}"}` (use the app's placeholders).
+   - Only forward messages from MTN / Airtel mobile money senders. Messages that do not look like payment confirmations are ignored anyway.
+3. Send yourself a small payment and check Admin > Payments: "Last message from your phone" should update.
+4. Press **Turn on** under "Automatic confirmation". Until then, matching payments show a "Seen on your phone" badge so approval is one click.
+
+Safety: SMS can in theory be faked, so at most 50 payments a day are auto-confirmed, every one is listed in the Activity log with the SMS it used, and each SMS can only confirm one payment.
