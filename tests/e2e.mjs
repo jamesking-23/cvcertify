@@ -123,6 +123,7 @@ try {
   // Manual mobile money: only when online payments are off and a number is configured
   db.onlineOff = true; db.plan = 'starter'; db.expires = null;
   await page.goto(base + '/#/app/account'); await page.reload();
+  await page.evaluate(async () => { Object.assign((await import('./js/config.js')).MANUAL_PAY, { mtn: '', airtel: '' }); });
   await page.getByRole('button', { name: 'Choose Professional' }).click();
   await page.getByText('Payments are not open yet').waitFor();
   await page.getByRole('button', { name: 'OK' }).click();
