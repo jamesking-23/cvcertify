@@ -100,11 +100,21 @@ async function grant(u, reload) {
 
 async function payments() {
   const { payments: rows } = await post('/admin/payments');
-  if (!rows.length) return h('div', { class: 'empty' }, h('h3', null, 'No payments yet'), h('p', null, 'Payments appear here as soon as a customer starts checkout.'));
-  return h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
-    h('thead', null, h('tr', null, ['Date', 'Customer', 'Plan', 'Amount', 'Method', 'Status', 'Reference'].map((x) => h('th', null, x)))),
-    h('tbody', null, rows.map((p) => h('tr', null, h('td', null, fmtDate(p.paidAt || p.createdAt)), h('td', null, p.email || '—'), h('td', null, `${p.plan} · ${p.months} mo`), h('td', null, ugx(p.amount)), h('td', null, p.method || '—'),
-      h('td', null, h('span', { class: `chip ${p.status === 'succeeded' ? 'chip-brand' : p.status === 'pending' ? 'chip-gold' : ''}` }, p.status)), h('td', { class: 'small muted' }, p.txRef))))));
+  if (!rows.length) return h('div', { class: 'empty' }, h('h3', null, 'No payments yet'), h('p', null, 'Payments appear here as soon as a customer starts checkout or submits a mobile money payment.'));
+  const review = async (p, approve) => {
+    const ok = await modal({ title: approve ? 'Approve this payment?' : 'Reject this payment?', body: h('div', { class: 'stack' }, h('p', null, `${p.email}: ${p.plan} for ${p.months} month${p.months > 1 ? 's' : ''}, ${ugx(p.amount)}.`), h('p', { class: 'muted small' }, approve ? `Only approve if your ${p.method === 'airtel' ? 'Airtel' : 'MTN'} statement shows ${ugx(p.amount)} received with transaction ID ${p.providerRef}.` : 'The customer keeps the Starter plan and can submit again.')), actions: [{ label: 'Cancel', value: false }, { label: approve ? 'Approve and grant plan' : 'Reject', value: true, class: 'btn-primary' }] });
+    if (!ok) return;
+    try { await post('/admin/payments/review', { id: p.id, approve }); toast(approve ? 'Approved. The plan is active.' : 'Rejected.'); show('payments'); } catch (e) { toast(e.message, 'error'); }
+  };
+  const waiting = rows.filter((p) => p.provider === 'manual' && p.status === 'pending');
+  return h('div', { class: 'stack' },
+    waiting.length ? h('div', { class: 'card stack', style: 'border-color:var(--gold-500,#c9a227)' }, h('h3', null, `${waiting.length} mobile money payment${waiting.length > 1 ? 's' : ''} waiting for you`),
+      waiting.map((p) => h('div', { class: 'row spread' }, h('div', null, h('b', null, `${ugx(p.amount)} · ${p.method === 'airtel' ? 'Airtel' : 'MTN'}`), h('div', { class: 'small muted' }, `${p.email} · from ${p.payerPhone} · ID ${p.providerRef} · ${fmtDate(p.createdAt)}`)),
+        h('div', { class: 'row' }, h('button', { class: 'btn btn-primary btn-sm', onclick: () => review(p, true) }, 'Approve'), h('button', { class: 'btn btn-outline btn-sm', onclick: () => review(p, false) }, 'Reject'))))) : null,
+    h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
+      h('thead', null, h('tr', null, ['Date', 'Customer', 'Plan', 'Amount', 'Method', 'Status', 'Reference'].map((x) => h('th', null, x)))),
+      h('tbody', null, rows.map((p) => h('tr', null, h('td', null, fmtDate(p.paidAt || p.createdAt)), h('td', null, p.email || '—'), h('td', null, `${p.plan} · ${p.months} mo`), h('td', null, ugx(p.amount)), h('td', null, p.provider === 'manual' ? `Manual ${p.method}` : (p.method || '—')),
+        h('td', null, h('span', { class: `chip ${p.status === 'succeeded' ? 'chip-brand' : p.status === 'pending' ? 'chip-gold' : ''}` }, p.status)), h('td', { class: 'small muted' }, p.providerRef || p.txRef)))))));
 }
 
 async function codes() {

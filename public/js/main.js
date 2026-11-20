@@ -91,7 +91,7 @@ function marketingShell(content) {
       menu),
     h('main', { id: 'main' }, content),
     h('footer', { class: 'site-footer' }, h('div', { class: 'container' },
-      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'), h('a', { href: '/terms' }, 'Terms'), h('a', { href: '/privacy' }, 'Privacy'), h('a', { href: '/refunds' }, 'Refunds')),
+      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'), h('a', { href: '/terms' }, 'Terms'), h('a', { href: '/privacy' }, 'Privacy'), h('a', { href: '/refunds' }, 'Payments')),
       h('div', { class: 'brand', style: 'justify-content:center;margin-bottom:8px' }, icon('shield'), 'CV-Certify'),
       h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`, BUILD !== 'dev' && h('span', { class: 'build', title: 'Site version. Use it to check you are not seeing a cached copy.' }, ` · v${BUILD}`))),
     h('div', { class: 'footer-mark', 'aria-hidden': 'true' }, 'CV-CERTIFY')));

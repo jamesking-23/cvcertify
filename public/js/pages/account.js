@@ -3,6 +3,7 @@ import { get, patch, post, del } from '../api.js';
 import { PLANS, PLAN_ORDER } from '../shared/constants.js';
 import { state, setUser, navigate } from '../main.js';
 import { formatPrice, isApprox } from '../shared/currency.js';
+import { MANUAL_PAY } from '../config.js';
 
 const MONTH_CHOICES = [1, 3, 12];
 const ugx = (n) => 'UGX ' + n.toLocaleString('en-US');
@@ -11,26 +12,62 @@ const STATUS = { succeeded: ['Paid', 'chip-brand'], pending: ['Pending', 'chip-g
 // Opens the checkout chooser. The server recomputes the price from the plan, so what is shown here is only a preview.
 async function payModal(planId) {
   const p = PLANS[planId];
+  const cfg = await get('/billing/config').catch(() => ({ enabled: false }));
+  const manualNets = [['mtn', 'MTN Mobile Money'], ['airtel', 'Airtel Money']].filter(([k]) => MANUAL_PAY[k]);
+  const methods = [cfg.enabled && ['online', 'Card or mobile money (instant)'], manualNets.length && ['manual', 'Send mobile money myself (confirmed within a day)']].filter(Boolean);
+  if (!methods.length) return modal({ title: 'Payments are not open yet', body: h('p', { class: 'muted' }, 'Online payments are being set up. If you have a redeem code, enter it on this page, or write to us and we will help.'), actions: [{ label: 'OK', value: true, class: 'btn-primary' }] });
+
   let months = 1;
+  let method = methods[0][0];
   const total = () => p.price * months;
   const totalEl = h('div', { class: 'pay-total' });
   const paint = () => { totalEl.replaceChildren(h('strong', null, ugx(total())), isApprox() ? h('span', { class: 'muted small' }, ` (about ${formatPrice(total())})`) : ''); };
-  const opts = MONTH_CHOICES.map((m) => {
-    const el = h('label', { class: 'pay-opt' }, h('input', { type: 'radio', name: 'months', checked: m === 1, onchange: () => { months = m; paint(); } }), h('span', null, h('b', null, m === 12 ? '12 months' : `${m} month${m > 1 ? 's' : ''}`), h('small', { class: 'muted' }, ugx(p.price * m))));
-    return el;
-  });
+  const opts = MONTH_CHOICES.map((m) => h('label', { class: 'pay-opt' }, h('input', { type: 'radio', name: 'months', checked: m === 1, onchange: () => { months = m; paint(); } }), h('span', null, h('b', null, m === 12 ? '12 months' : `${m} month${m > 1 ? 's' : ''}`), h('small', { class: 'muted' }, ugx(p.price * m)))));
   paint();
-  const body = h('div', { class: 'stack' },
-    h('p', { class: 'muted' }, `${p.name}. You pay once for the period you choose. It does not renew by itself, so you are never charged without asking.`),
-    h('div', { class: 'pay-opts' }, opts),
-    h('div', { class: 'row spread' }, h('span', null, 'Total today'), totalEl),
-    h('p', { class: 'muted small' }, 'You will pay on Flutterwave’s secure page with a Visa or Mastercard card, or MTN or Airtel Mobile Money. CV-Certify never sees your card or PIN.'));
-  const go = await modal({ title: `Get ${p.name}`, body, actions: [{ label: 'Cancel', value: false }, { label: 'Continue to payment', value: true, class: 'btn-primary' }] });
+  const how = methods.length > 1 ? h('div', { class: 'pay-opts' }, methods.map(([k, label], i) => h('label', { class: 'pay-opt' }, h('input', { type: 'radio', name: 'method', checked: i === 0, onchange: () => { method = k; } }), h('span', null, h('b', null, label))))) : null;
+  const go = await modal({
+    title: `Get ${p.name}`,
+    body: h('div', { class: 'stack' },
+      h('p', { class: 'muted' }, `${p.name}. You pay once for the period you choose. It does not renew by itself, so you are never charged without asking.`),
+      h('div', { class: 'pay-opts' }, opts), h('div', { class: 'row spread' }, h('span', null, 'Total today'), totalEl),
+      how, h('p', { class: 'muted small' }, methods.some(([k]) => k === 'online') ? 'Card and mobile money are paid on Flutterwave’s secure page. CV-Certify never sees your card or PIN.' : 'You will send the money from your own phone. We never ask for your PIN.')),
+    actions: [{ label: 'Cancel', value: false }, { label: 'Continue', value: true, class: 'btn-primary' }],
+  });
   if (!go) return;
+  if (method === 'online') {
+    try { const out = await post('/billing/checkout', { plan: planId, months }); location.assign(out.link); } catch (e) { toast(e.message, 'error'); }
+    return;
+  }
+  return manualModal(planId, months, manualNets);
+}
+
+// Customer pays from their own phone, then tells us the transaction ID. An admin matches it to the statement and approves.
+async function manualModal(planId, months, nets) {
+  const p = PLANS[planId];
+  const amount = p.price * months;
+  const network = h('select', { class: 'input' }, nets.map(([k, label]) => h('option', { value: k }, label)));
+  const to = h('div', { class: 'card stack', style: 'background:var(--ink-50)' });
+  const paintTo = () => { const num = MANUAL_PAY[network.value]; to.replaceChildren(h('div', { class: 'muted small' }, 'Send exactly'), h('div', { class: 'pay-total' }, h('strong', null, ugx(amount))), h('div', { class: 'muted small' }, 'to'), h('div', null, h('strong', { class: 'mono' }, num), MANUAL_PAY.name ? h('span', { class: 'muted' }, `  ·  ${MANUAL_PAY.name}`) : '')); };
+  network.addEventListener('change', paintTo); paintTo();
+  const phone = h('input', { class: 'input', type: 'tel', placeholder: 'The number you paid from, e.g. 0772 123 456', autocomplete: 'tel' });
+  const ref = h('input', { class: 'input', placeholder: 'Transaction ID from the confirmation SMS', autocomplete: 'off' });
+  const ok = await modal({
+    title: 'Pay by mobile money',
+    body: h('div', { class: 'stack' },
+      h('ol', { class: 'muted', style: 'margin:0;padding-left:18px;display:grid;gap:6px' }, h('li', null, 'Choose your network and send the amount below.'), h('li', null, 'Wait for the confirmation SMS and copy the transaction ID.'), h('li', null, 'Enter it here. We confirm it, usually the same day, and your plan switches on.')),
+      h('div', { class: 'field' }, h('label', null, 'Network'), network), to,
+      h('div', { class: 'field' }, h('label', null, 'Your phone number'), phone), h('div', { class: 'field' }, h('label', null, 'Transaction ID'), ref)),
+    actions: [{ label: 'Cancel', value: false }, { label: 'I have paid', value: true, class: 'btn-primary' }],
+  });
+  if (!ok) return;
   try {
-    const out = await post('/billing/checkout', { plan: planId, months });
-    location.assign(out.link);
-  } catch (e) { toast(e.message, 'error'); }
+    await post('/billing/manual', { plan: planId, months, network: network.value, phone: phone.value, ref: ref.value });
+    toast('Thank you. We will confirm your payment shortly and switch your plan on.');
+    navigate('/app/account#plans', { replace: true });
+  } catch (e) {
+    toast(e.message, 'error');
+    return manualModal(planId, months, nets);
+  }
 }
 
 function redeemCard() {

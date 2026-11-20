@@ -37,9 +37,8 @@ export const privacyPage = () => doc('Privacy Policy', [
   ['Security', 'Data is stored with encryption in transit, and access rules in the database stop one user from reading another’s data. No system is perfectly secure, so use a strong, unique password.'],
 ]);
 
-export const refundsPage = () => doc('Refund Policy', [
-  ['How payments work', 'You pay once for the period you choose. Nothing renews automatically, so you will never be charged again unless you choose to pay again.'],
-  ['Refunds', ['If you paid and your plan did not activate, we will fix it or refund you in full.', 'If you were charged twice for the same purchase, we will refund the extra payment.', 'If you change your mind within 7 days of paying and have not used the paid features, ask for a refund and we will return the amount.', 'Otherwise, payments for time already used are not refunded.']],
-  ['How to ask', ['Write to us with the email on your account and the payment reference shown in Account → Payments.', 'Approved refunds go back to the card or mobile money number used for the payment. Timing depends on your bank or mobile money provider and is usually within 5 to 10 working days.']],
-  ['Redeem codes', 'Codes are free access given by us and have no cash value, so they cannot be refunded.'],
+export const refundsPage = () => doc('Payments and Refunds', [
+  ['How payments work', 'You pay once for the period you choose. Nothing renews automatically, so you will never be charged again unless you choose to pay again. When the period ends, your account returns to Starter and your data is kept.'],
+  ['If something goes wrong', ['If you paid and your plan did not activate, or you were charged by mistake, write to us with the email on your account and your payment reference or transaction ID. We will look into it and put it right.', 'Manual mobile money payments are confirmed by us after we see them on our statement. This is usually done the same day.']],
+  ['Redeem codes', 'Codes are free access given by us and have no cash value.'],
 ]);

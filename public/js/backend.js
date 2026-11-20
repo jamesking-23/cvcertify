@@ -27,7 +27,7 @@ function fail(e) {
   const hint = e.hint;
   if (hint === 'quota_exceeded' || hint === 'upgrade_required') return new ApiError(e.message, 402, hint);
   if (hint === 'forbidden') return new ApiError('You do not have access to this page.', 403, 'forbidden');
-  if (hint === 'bad_code' || hint === 'already_redeemed' || hint === 'higher_plan' || hint === 'rate_limited') return new ApiError(e.message, 400, hint);
+  if (hint === 'duplicate_ref' || hint === 'too_many_pending' || hint === 'bad_code' || hint === 'already_redeemed' || hint === 'higher_plan' || hint === 'rate_limited') return new ApiError(e.message, 400, hint);
   if (hint === 'billing_required') return new ApiError(e.message, 402, hint);
   if (hint === 'not_found') return new ApiError(e.message, 404, 'not_found');
   if (hint === 'unauthenticated' || e.code === 'unauthenticated') return new ApiError('Please sign in to continue.', 401, 'unauthenticated');
@@ -116,6 +116,7 @@ on('GET', /^\/billing\/config$/, async () => { try { return await fn('cvc-pay', 
 on('POST', /^\/billing\/checkout$/, async (_, b) => payFn({ task: 'checkout', plan: String(b.plan), months: Number(b.months) || 1, returnUrl: location.origin + location.pathname }));
 on('POST', /^\/billing\/verify$/, async (_, b) => ({ result: await payFn({ task: 'verify', txRef: String(b.txRef || '') }), user: userView(await rpc('cvc_me')) }));
 on('GET', /^\/billing\/history$/, async () => ({ payments: await rest('GET', 'cvc_payments', { query: 'select=id,plan,months,amount,currency,status,method,created_at,paid_at&order=created_at.desc&limit=20' }) }));
+on('POST', /^\/billing\/manual$/, async (_, b) => rpc('cvc_submit_manual_payment', { p_plan: String(b.plan), p_months: Number(b.months) || 1, p_network: String(b.network), p_phone: String(b.phone || '').slice(0, 20), p_ref: String(b.ref || '').slice(0, 40) }));
 on('POST', /^\/billing\/redeem$/, async (_, b) => {
   const r = await rpc('cvc_redeem', { p_code: String(b.code || '').slice(0, 40) });
   if (r?.error) throw new ApiError(r.message, 400, r.error);
@@ -126,6 +127,7 @@ on('POST', /^\/billing\/redeem$/, async (_, b) => {
 on('POST', /^\/admin\/stats$/, async (_, b) => rpc('cvc_admin_stats', { p_days: Number(b.days) || 30 }));
 on('POST', /^\/admin\/users$/, async (_, b) => rpc('cvc_admin_users', { p_q: String(b.q || '').slice(0, 80), p_limit: 25, p_offset: Number(b.offset) || 0 }));
 on('POST', /^\/admin\/payments$/, async () => ({ payments: await rpc('cvc_admin_payments', { p_limit: 100 }) }));
+on('POST', /^\/admin\/payments\/review$/, async (_, b) => { await rpc('cvc_admin_review_payment', { p_id: String(b.id), p_approve: !!b.approve }); return { ok: true }; });
 on('POST', /^\/admin\/codes$/, async () => ({ codes: await rpc('cvc_admin_codes') }));
 on('POST', /^\/admin\/codes\/create$/, async (_, b) => ({ codes: await rpc('cvc_admin_create_codes', { p_plan: String(b.plan), p_days: Number(b.days), p_count: Number(b.count), p_max_uses: Number(b.maxUses) || 1, p_expires_at: b.expiresAt || null, p_note: String(b.note || '').slice(0, 200) }) }));
 on('POST', /^\/admin\/codes\/active$/, async (_, b) => { await rpc('cvc_admin_set_code_active', { p_code: String(b.code), p_active: !!b.active }); return { ok: true }; });

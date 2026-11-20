@@ -10,7 +10,7 @@ const server = createServer();
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
 
-const db = { user: null, profile: null, resumes: [], admin: false, plan: 'starter', expires: null, codes: [] };
+const db = { manualRows: [], onlineOff: false, user: null, profile: null, resumes: [], admin: false, plan: 'starter', expires: null, codes: [] };
 const json = (route, status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
 const emptyProfile = (name, email) => ({ personal: { fullName: name, headline: '', email, phone: '', location: '', website: '', linkedin: '', github: '', dob: '', nationality: '' }, summary: '', experience: [], education: [], projects: [], skills: [], certifications: [], languages: [], referees: [] });
 const PAID = { resumes: 1e12, rewrites: 1e12, letters: true, ats: true, interview: true, roadmap: false, portfolio: false };
@@ -49,11 +49,18 @@ await ctx.route('https://dgvaoswcbzzcyaentjwr.supabase.co/**', async (route) => 
     db.plan = 'professional'; db.expires = new Date(Date.now() + 30 * 864e5).toISOString(); return json(route, 200, me());
   }
   if (p === '/functions/v1/cvc-pay') {
-    if (body.task === 'config') return json(route, 200, { enabled: true });
+    if (body.task === 'config') return json(route, 200, { enabled: !db.onlineOff });
     if (body.task === 'checkout') return json(route, 200, { link: base + '/#/pay-mock?m=' + body.months, txRef: 'cvc_' + 'a'.repeat(32), amount: 2500 * body.months, currency: 'UGX' });
     if (body.task === 'verify') { db.plan = 'professional'; db.expires = new Date(Date.now() + 30 * 864e5).toISOString(); return json(route, 200, { status: 'succeeded', plan: 'professional' }); }
   }
   if (p === '/rest/v1/rpc/cvc_admin_stats') return db.admin ? json(route, 200, { days: body.p_days, totals: { users: 5, paying: 1, resumes: 3, letters: 1, certified: 1, aiRewritesThisMonth: 4, revenueAllTime: 7500 }, period: { newUsers: 2, visitors: 40, views: 90, signups: 0, payments: 1, revenue: 2500, redemptions: 1 }, plans: [{ plan: 'starter', count: 4 }], countries: [{ country: 'AF', count: 5 }], daily: [{ day: '2026-11-18', visitors: 10, views: 20, signups: 1, revenue: 0 }, { day: '2026-11-19', visitors: 30, views: 70, signups: 1, revenue: 2500 }], topPages: [{ path: '/', views: 50 }], topReferrers: [{ ref: 'google.com', visitors: 12 }] }) : json(route, 400, { message: 'Not authorised.', hint: 'forbidden' });
+  if (p === '/rest/v1/rpc/cvc_submit_manual_payment') {
+    if (!/^[A-Z0-9]{6,}$/i.test(body.p_ref.replace(/[^A-Za-z0-9]/g, ''))) return json(route, 400, { message: 'Enter the transaction ID from your payment confirmation message.', hint: '' });
+    db.manualRows.push({ id: 'm1', txRef: 'cvm_x', email: db.user.email, plan: body.p_plan, months: body.p_months, amount: 2500 * body.p_months, currency: 'UGX', status: 'pending', method: body.p_network, provider: 'manual', providerRef: body.p_ref.replace(/[^A-Za-z0-9]/g, '').toUpperCase(), payerPhone: body.p_phone, createdAt: new Date().toISOString() });
+    return json(route, 200, { id: 'm1', amount: 2500 * body.p_months });
+  }
+  if (p === '/rest/v1/rpc/cvc_admin_payments') return json(route, 200, db.manualRows);
+  if (p === '/rest/v1/rpc/cvc_admin_review_payment') { db.manualRows = []; return json(route, 200, null); }
   if (p === '/rest/v1/rpc/cvc_admin_codes') return json(route, 200, db.codes);
   if (p === '/rest/v1/rpc/cvc_admin_create_codes') { const made = Array.from({ length: body.p_count }, (_, i) => `CVC-TEST-000${i}-ABCD`); db.codes.push(...made.map((code) => ({ code, plan: body.p_plan, days: body.p_days, maxUses: body.p_max_uses, uses: 0, expiresAt: null, active: true, note: body.p_note }))); return json(route, 200, made); }
   return json(route, 404, { message: 'unmocked ' + p });
@@ -110,8 +117,28 @@ try {
   await page.getByText('3 months').click();
   await page.getByText('UGX 7,500').first().waitFor();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/04-pay.png` });
-  await page.getByRole('button', { name: 'Continue to payment' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.waitForURL(/pay-mock\?m=3/);
+
+  // Manual mobile money: only when online payments are off and a number is configured
+  db.onlineOff = true; db.plan = 'starter'; db.expires = null;
+  await page.goto(base + '/#/app/account'); await page.reload();
+  await page.getByRole('button', { name: 'Choose Professional' }).click();
+  await page.getByText('Payments are not open yet').waitFor();
+  await page.getByRole('button', { name: 'OK' }).click();
+  await page.evaluate(async () => { (await import('./js/config.js')).MANUAL_PAY.mtn = '0770 000 000'; });
+  await page.getByRole('button', { name: 'Choose Professional' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByText('Send exactly').waitFor();
+  await page.getByPlaceholder('Transaction ID').fill('x');
+  await page.getByPlaceholder(/number you paid from/).fill('0772123456');
+  await page.getByRole('button', { name: 'I have paid' }).click();
+  await page.getByText('Enter the transaction ID').first().waitFor();
+  await page.getByPlaceholder('Transaction ID').fill('MP261120.1234.A56789');
+  await page.getByPlaceholder(/number you paid from/).fill('0772123456');
+  await page.getByRole('button', { name: 'I have paid' }).click();
+  await page.getByText('We will confirm your payment shortly').waitFor();
+  db.onlineOff = false;
 
   // Admin: hidden and refused for normal users, working for admins
   await page.goto(base + '/#/app/admin');
@@ -121,6 +148,11 @@ try {
   await page.goto(base + '/#/app/admin'); await page.reload();
   await page.getByText('Visitors per day').waitFor();
   await page.getByText('google.com').waitFor();
+  await page.getByRole('tab', { name: 'Payments' }).click();
+  await page.getByText('waiting for you').waitFor();
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  await page.getByRole('button', { name: 'Approve and grant plan' }).click();
+  await page.getByText('Approved').waitFor();
   await page.getByRole('tab', { name: 'Redeem codes' }).click();
   await page.getByRole('button', { name: 'Generate codes' }).click();
   await page.locator('pre.codes').waitFor();
@@ -133,7 +165,7 @@ try {
   await page.goto(base + '/#/privacy');
   await page.getByRole('heading', { name: 'Privacy Policy' }).waitFor();
   await page.goto(base + '/#/refunds');
-  await page.getByRole('heading', { name: 'Refund Policy' }).waitFor();
+  await page.getByRole('heading', { name: 'Payments and Refunds' }).waitFor();
 
   await page.goto(base + '/#/does-not-exist');
   await page.getByRole('heading', { name: 'Page not found' }).waitFor();
