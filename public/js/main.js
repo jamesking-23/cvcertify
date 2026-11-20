@@ -51,6 +51,9 @@ const routes = [
   { re: /^\/signup$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'signupPage'), title: 'Create account' },
   { re: /^\/forgot$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'forgotPage'), title: 'Reset password' },
   { re: /^\/reset$/, public: true, load: lazy('./pages/auth.js', 'resetPage'), title: 'Choose a new password' },
+  { re: /^\/terms$/, public: true, load: lazy('./pages/legal.js', 'termsPage'), title: 'Terms of Service' },
+  { re: /^\/privacy$/, public: true, load: lazy('./pages/legal.js', 'privacyPage'), title: 'Privacy Policy' },
+  { re: /^\/refunds$/, public: true, load: lazy('./pages/legal.js', 'refundsPage'), title: 'Refund Policy' },
   { re: /^\/verify(?:\/([^/]+))?$/, public: true, load: lazy('./pages/verify.js'), title: 'Verify a document', params: ['id'] },
   { re: /^\/p\/([^/]+)$/, public: true, bare: true, load: lazy('./pages/portfolio-public.js'), title: 'Portfolio', params: ['slug'] },
   { re: /^\/app$/, app: 'home', load: lazy('./pages/dashboard.js'), title: 'Dashboard' },
@@ -88,7 +91,7 @@ function marketingShell(content) {
       menu),
     h('main', { id: 'main' }, content),
     h('footer', { class: 'site-footer' }, h('div', { class: 'container' },
-      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document')),
+      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'), h('a', { href: '/terms' }, 'Terms'), h('a', { href: '/privacy' }, 'Privacy'), h('a', { href: '/refunds' }, 'Refunds')),
       h('div', { class: 'brand', style: 'justify-content:center;margin-bottom:8px' }, icon('shield'), 'CV-Certify'),
       h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`, BUILD !== 'dev' && h('span', { class: 'build', title: 'Site version. Use it to check you are not seeing a cached copy.' }, ` · v${BUILD}`))),
     h('div', { class: 'footer-mark', 'aria-hidden': 'true' }, 'CV-CERTIFY')));

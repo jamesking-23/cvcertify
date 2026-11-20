@@ -128,6 +128,13 @@ try {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/05-admin.png` });
   db.admin = false;
 
+  await page.goto(base + '/#/terms');
+  await page.getByRole('heading', { name: 'Terms of Service' }).waitFor();
+  await page.goto(base + '/#/privacy');
+  await page.getByRole('heading', { name: 'Privacy Policy' }).waitFor();
+  await page.goto(base + '/#/refunds');
+  await page.getByRole('heading', { name: 'Refund Policy' }).waitFor();
+
   await page.goto(base + '/#/does-not-exist');
   await page.getByRole('heading', { name: 'Page not found' }).waitFor();
   assert.deepEqual(errors, [], 'no script errors: ' + errors.join(' | '));

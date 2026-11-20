@@ -84,7 +84,7 @@ export function signupPage({ query }) {
       showError(err, ex.message);
       setBusy(submit, false);
     }
-  } }, err, name.node, email.node, pw.node, submit);
+  } }, err, name.node, email.node, pw.node, submit, h('p', { class: 'muted small center' }, 'By creating an account you agree to our ', h('a', { href: '/terms' }, 'Terms'), ' and ', h('a', { href: '/privacy' }, 'Privacy Policy'), '.'));
   return shell('Create your account', 'One profile. Every career document you’ll ever need.', form, googleButton() && h('div', { class: 'divider' }, 'or continue with'), googleButton(),
     h('p', { class: 'center muted small' }, 'Already have an account? ', h('a', { href: '/login', style: 'font-weight:600;color:var(--ink-950)' }, 'Sign in')));
 }

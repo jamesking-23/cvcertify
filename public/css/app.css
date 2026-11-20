@@ -280,7 +280,10 @@ img, svg { display: block; max-width: 100%; }
 
 /* ---------- resume paper (preview + print) ---------- */
 .paper-wrap { background: var(--ink-100); border-radius: 16px; padding: 18px; overflow: auto; }
-.paper { background: #fff; box-shadow: var(--shadow-md); width: 100%; aspect-ratio: 210 / 297; padding: 7.5% 8%; font-size: clamp(7px, 1.05vw, 10.5px); line-height: 1.4; color: #111; overflow: hidden; position: relative; font-family: var(--rf, Georgia, serif); }
+.paper { background: #fff; box-shadow: var(--shadow-md); width: 100%; aspect-ratio: 210 / 297; padding: 7.5% 8%; font-size: clamp(7px, 1.05vw, 10.5px); line-height: 1.4; color: #111; overflow: visible; position: relative; font-family: var(--rf, Georgia, serif); }
+/* A page keeps A4 proportions but grows when the content is longer, so nothing is hidden or covered by the verification footer. */
+.paper:has(.verified) { padding-bottom: 17%; }
+.desk .paper, .shelf-paper .paper, .country-sheet .paper { overflow: hidden; }
 .paper.letter { aspect-ratio: 8.5 / 11; }
 .paper.long { aspect-ratio: auto; min-height: 297 / 210 * 100%; overflow: visible; }
 .paper h1 { font-size: 2.6em; margin: 0 0 .15em; letter-spacing: -.01em; color: var(--rh, #000); font-weight: 700; }
@@ -638,3 +641,11 @@ body.lp-body { --lp-paper: #f1ece0; --lp-paper-2: #e8e1d1; --lp-card: #fbf8f1; -
 .table th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-500); }
 .mono, .codes { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .codes { margin: 0; padding: 12px; background: var(--ink-50); border-radius: 8px; user-select: all; white-space: pre-wrap; }
+
+/* legal pages */
+.legal { max-width: 760px; }
+.legal h1 { margin-bottom: 4px; }
+.legal section { margin-top: 26px; }
+.legal h2 { font-size: 19px; margin-bottom: 8px; }
+.legal p, .legal li { line-height: 1.65; color: var(--ink-700); }
+.legal ul { padding-left: 20px; display: grid; gap: 6px; margin: 0; }
