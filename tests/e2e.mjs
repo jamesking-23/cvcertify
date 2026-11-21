@@ -13,10 +13,8 @@ const base = `http://localhost:${server.address().port}`;
 const db = { auto: false, manualRows: [], onlineOff: false, user: null, profile: null, resumes: [], admin: false, plan: 'starter', expires: null, codes: [] };
 const json = (route, status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
 const emptyProfile = (name, email) => ({ personal: { fullName: name, headline: '', email, phone: '', location: '', website: '', linkedin: '', github: '', dob: '', nationality: '' }, summary: '', experience: [], education: [], projects: [], skills: [], certifications: [], languages: [], referees: [] });
-const PAID = { resumes: 1e12, rewrites: 1e12, letters: true, ats: true, interview: true, roadmap: false, portfolio: false };
-const me = () => ({ id: 'u1', name: db.user.name, email: db.user.email, country: 'US', createdAt: new Date().toISOString(), isAdmin: db.admin, plan: db.plan === 'starter'
-  ? { id: 'starter', name: 'Starter', limits: { resumes: 2, rewrites: 3, letters: false, ats: false, interview: false, roadmap: false, portfolio: false }, usage: { month: '2026-11', rewrites: 0 } }
-  : { id: 'professional', name: 'Professional', expiresAt: db.expires, limits: PAID, usage: { month: '2026-11', rewrites: 0 } } });
+const PAID = { resumes: null, rewrites: 200, letters: true, ats: true, interview: true, roadmap: true, portfolio: true };
+const me = () => ({ id: 'u1', name: db.user.name, email: db.user.email, country: 'US', createdAt: new Date().toISOString(), isAdmin: db.admin, plan: { id: 'starter', name: 'Free', limits: PAID, usage: { month: '2026-11', rewrites: 0 } }});
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
@@ -98,50 +96,14 @@ try {
   await page.getByText('Document not found').waitFor();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/03-verify.png` });
 
-  // Account: redeem codes, checkout, payment return
+  // Account: free for everyone, no plans to buy
   await page.goto(base + '/#/app/account');
-  await page.getByRole('heading', { name: 'Account & plan' }).waitFor();
-  await page.getByLabel('Redeem code').fill('wrong-code');
-  await page.getByRole('button', { name: 'Redeem' }).click();
-  await page.getByText('not valid').waitFor();
-  await page.getByLabel('Redeem code').fill('cvc-good-aaaa-bbbb');
-  await page.getByRole('button', { name: 'Redeem' }).click();
-  await page.getByText('Active until').waitFor();
-  db.plan = 'starter'; db.expires = null;
-  await page.goto(base + '/?cvcpay=1&tx_ref=cvc_' + 'a'.repeat(32) + '&status=successful&transaction_id=1');
-  await page.getByText('Active until').waitFor();
-  assert.ok(!page.url().includes('cvcpay'), 'payment params are removed from the address bar');
-  db.plan = 'starter';
-  await page.goto(base + '/#/app/account');
-  await page.reload();
-  await page.getByRole('button', { name: 'Choose Professional' }).click();
-  await page.getByText('Total today').waitFor();
-  await page.getByText('3 months').click();
-  await page.getByText('UGX 7,500').first().waitFor();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/04-pay.png` });
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.waitForURL(/pay-mock\?m=3/);
-
-  // Manual mobile money: only when online payments are off and a number is configured
-  db.onlineOff = true; db.plan = 'starter'; db.expires = null;
-  await page.goto(base + '/#/app/account'); await page.reload();
-  await page.evaluate(async () => { Object.assign((await import('./js/config.js')).MANUAL_PAY, { mtn: '', airtel: '' }); });
-  await page.getByRole('button', { name: 'Choose Professional' }).click();
-  await page.getByText('Payments are not open yet').waitFor();
-  await page.getByRole('button', { name: 'OK' }).click();
-  await page.evaluate(async () => { (await import('./js/config.js')).MANUAL_PAY.mtn = '0770 000 000'; });
-  await page.getByRole('button', { name: 'Choose Professional' }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByText('Send exactly').waitFor();
-  await page.getByPlaceholder('Transaction ID').fill('x');
-  await page.getByPlaceholder(/number you paid from/).fill('0772123456');
-  await page.getByRole('button', { name: 'I have paid' }).click();
-  await page.getByText('Enter the transaction ID').first().waitFor();
-  await page.getByPlaceholder('Transaction ID').fill('MP261120.1234.A56789');
-  await page.getByPlaceholder(/number you paid from/).fill('0772123456');
-  await page.getByRole('button', { name: 'I have paid' }).click();
-  await page.getByText('We will confirm your payment shortly').waitFor();
-  db.onlineOff = false;
+  await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
+  await page.getByText('Everything on CV-Certify is free').waitFor();
+  assert.equal(await page.getByText(/Redeem|Upgrade|Choose Professional/).count(), 0, 'no payment UI remains');
+  assert.equal(await page.locator('.side-link .icon-lock, .side-link [data-icon="lock"]').count(), 0, 'no locked tools');
+  await page.goto(base + '/#/pricing');
+  await page.getByRole('heading', { name: 'Page not found' }).waitFor();
 
   // Admin: hidden and refused for normal users, working for admins
   await page.goto(base + '/#/app/admin');
@@ -151,18 +113,8 @@ try {
   await page.goto(base + '/#/app/admin'); await page.reload();
   await page.getByText('Visitors per day').waitFor();
   await page.getByText('google.com').waitFor();
-  await page.getByRole('tab', { name: 'Payments' }).click();
-  await page.getByText('Automatic confirmation').waitFor();
-  await page.getByRole('button', { name: 'Turn on' }).click();
-  await page.getByText('Automatic confirmation is on.').waitFor();
-  await page.getByText('waiting for you').waitFor();
-  await page.getByRole('button', { name: 'Approve', exact: true }).click();
-  await page.getByRole('button', { name: 'Approve and grant plan' }).click();
-  await page.getByText('Approved').waitFor();
-  await page.getByRole('tab', { name: 'Redeem codes' }).click();
-  await page.getByRole('button', { name: 'Generate codes' }).click();
-  await page.locator('pre.codes').waitFor();
-  assert.match(await page.locator('pre.codes').innerText(), /^CVC-TEST/);
+  await page.getByRole('tab', { name: 'Users' }).click();
+  assert.equal(await page.getByRole('tab', { name: /Payments|Redeem/ }).count(), 0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/05-admin.png` });
   db.admin = false;
 
@@ -170,8 +122,6 @@ try {
   await page.getByRole('heading', { name: 'Terms of Service' }).waitFor();
   await page.goto(base + '/#/privacy');
   await page.getByRole('heading', { name: 'Privacy Policy' }).waitFor();
-  await page.goto(base + '/#/refunds');
-  await page.getByRole('heading', { name: 'Payments and Refunds' }).waitFor();
 
   await page.goto(base + '/#/does-not-exist');
   await page.getByRole('heading', { name: 'Page not found' }).waitFor();

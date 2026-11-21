@@ -45,7 +45,6 @@ const lazy = (path, fn = 'default') => async (ctx) => (await import(path))[fn](c
 const routes = [
   { re: /^\/$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: '' },
   { re: /^\/templates$/, public: true, load: lazy('./pages/marketing.js', 'templatesPage'), title: 'Templates' },
-  { re: /^\/pricing$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: 'Pricing', scroll: 'pricing' },
   { re: /^\/features$/, public: true, load: lazy('./pages/landing.js', 'landing'), title: 'Features', scroll: 'features' },
   { re: /^\/login$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'loginPage'), title: 'Sign in' },
   { re: /^\/signup$/, public: true, guestOnly: true, load: lazy('./pages/auth.js', 'signupPage'), title: 'Create account' },
@@ -53,7 +52,6 @@ const routes = [
   { re: /^\/reset$/, public: true, load: lazy('./pages/auth.js', 'resetPage'), title: 'Choose a new password' },
   { re: /^\/terms$/, public: true, load: lazy('./pages/legal.js', 'termsPage'), title: 'Terms of Service' },
   { re: /^\/privacy$/, public: true, load: lazy('./pages/legal.js', 'privacyPage'), title: 'Privacy Policy' },
-  { re: /^\/refunds$/, public: true, load: lazy('./pages/legal.js', 'refundsPage'), title: 'Refund Policy' },
   { re: /^\/verify(?:\/([^/]+))?$/, public: true, load: lazy('./pages/verify.js'), title: 'Verify a document', params: ['id'] },
   { re: /^\/p\/([^/]+)$/, public: true, bare: true, load: lazy('./pages/portfolio-public.js'), title: 'Portfolio', params: ['slug'] },
   { re: /^\/app$/, app: 'home', load: lazy('./pages/dashboard.js'), title: 'Dashboard' },
@@ -67,7 +65,7 @@ const routes = [
   { re: /^\/app\/assistant$/, app: 'assistant', load: lazy('./pages/assistant.js'), title: 'AI assistant' },
   { re: /^\/app\/portfolio$/, app: 'portfolio', load: lazy('./pages/portfolio.js'), title: 'Portfolio' },
   { re: /^\/app\/admin$/, app: 'admin', load: lazy('./pages/admin.js'), title: 'Admin' },
-  { re: /^\/app\/account$/, app: 'account', load: lazy('./pages/account.js'), title: 'Account & plan' },
+  { re: /^\/app\/account$/, app: 'account', load: lazy('./pages/account.js'), title: 'Account' },
 ];
 
 /* ---------- shells ---------- */
@@ -79,19 +77,19 @@ function marketingShell(content) {
   const cur = here().path;
   const link = (href, label) => h('a', { href, 'aria-current': cur === href.split('#')[0] && href !== '/' ? 'page' : null }, label);
   const menu = h('div', { class: 'mobile-menu', id: 'mobile-menu' },
-    h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'),
+    h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/verify' }, 'Verify a document'),
     state.user ? h('a', { href: '/app' }, 'Open dashboard') : [h('a', { href: '/login' }, 'Sign in'), h('a', { href: '/signup' }, 'Get started')]);
   const btn = h('button', { class: 'menu-btn', 'aria-label': 'Menu', 'aria-expanded': 'false', 'aria-controls': 'mobile-menu', onclick: () => { const o = menu.classList.toggle('open'); btn.setAttribute('aria-expanded', o); } }, icon('menu'));
   return h('div', null,
     h('header', { class: 'site-header' },
-      h('div', { class: 'container inner' }, logo(), h('nav', { class: 'nav', 'aria-label': 'Main' }, link('/features', 'Features'), link('/templates', 'Templates'), link('/pricing', 'Pricing')),
+      h('div', { class: 'container inner' }, logo(), h('nav', { class: 'nav', 'aria-label': 'Main' }, link('/features', 'Features'), link('/templates', 'Templates')),
         h('div', { class: 'header-actions' },
           state.user ? h('a', { href: '/app', class: 'btn btn-primary btn-sm' }, 'Dashboard') : [h('a', { href: '/login', class: 'link' }, 'Sign in'), h('a', { href: '/signup', class: 'btn btn-primary btn-sm' }, 'Get started')],
           btn)),
       menu),
     h('main', { id: 'main' }, content),
     h('footer', { class: 'site-footer' }, h('div', { class: 'container' },
-      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/pricing' }, 'Pricing'), h('a', { href: '/verify' }, 'Verify a document'), h('a', { href: '/terms' }, 'Terms'), h('a', { href: '/privacy' }, 'Privacy'), h('a', { href: '/refunds' }, 'Payments')),
+      h('div', { class: 'footer-links' }, h('a', { href: '/features' }, 'Features'), h('a', { href: '/templates' }, 'Templates'), h('a', { href: '/verify' }, 'Verify a document'), h('a', { href: '/terms' }, 'Terms'), h('a', { href: '/privacy' }, 'Privacy')),
       h('div', { class: 'brand', style: 'justify-content:center;margin-bottom:8px' }, icon('shield'), 'CV-Certify'),
       h('p', null, `© ${new Date().getFullYear()} CV-Certify. A job for everyone.`, BUILD !== 'dev' && h('span', { class: 'build', title: 'Site version. Use it to check you are not seeing a cached copy.' }, ` · v${BUILD}`))),
     h('div', { class: 'footer-mark', 'aria-hidden': 'true' }, 'CV-CERTIFY')));
@@ -118,11 +116,8 @@ function appShell(content, active) {
     h('div', { class: 'side-spacer' }),
     h('a', { href: '/verify', class: 'side-link' }, icon('qr'), 'Verify a document'),
     u.isAdmin && h('a', { href: '/app/admin', class: 'side-link', 'aria-current': active === 'admin' ? 'page' : null }, icon('shield'), 'Admin'),
-    h('a', { href: '/app/account', class: 'side-link', 'aria-current': active === 'account' ? 'page' : null }, icon('settings'), 'Account & plan'),
-    h('div', { class: 'plan-box' },
-      h('div', { class: 'row spread' }, h('strong', null, u.plan.name), h('a', { href: '/app/account#plans', class: 'eyebrow small' }, u.plan.id === 'career' ? 'Manage' : 'Upgrade')),
-      limits.rewrites != null && [h('div', { class: 'bar' }, h('i', { style: `width:${Math.min(100, (u.plan.usage.rewrites / limits.rewrites) * 100)}%` })), h('div', { class: 'muted' }, `${u.plan.usage.rewrites} / ${limits.rewrites} AI rewrites this month`)],
-      limits.rewrites == null && h('div', { class: 'muted', style: 'margin-top:4px' }, 'Unlimited AI tailoring')),
+    h('a', { href: '/app/account', class: 'side-link', 'aria-current': active === 'account' ? 'page' : null }, icon('settings'), 'Account'),
+    limits.rewrites != null && h('div', { class: 'plan-box' }, h('div', { class: 'row spread' }, h('strong', null, 'AI this month')), h('div', { class: 'bar' }, h('i', { style: `width:${Math.min(100, (u.plan.usage.rewrites / limits.rewrites) * 100)}%` })), h('div', { class: 'muted' }, `${u.plan.usage.rewrites} / ${limits.rewrites} AI actions · everything else is unlimited`)),
     h('button', { class: 'side-link', onclick: signOut }, icon('logout'), 'Sign out'));
   const scrim = h('div', { class: 'scrim', onclick: () => { side.classList.remove('open'); scrim.remove(); } });
   const top = h('div', { class: 'topbar' }, logo('/app'), h('button', { class: 'icon-btn', 'aria-label': 'Open menu', onclick: () => { side.classList.add('open'); document.body.append(scrim); } }, icon('menu')));
@@ -215,21 +210,8 @@ export const planName = (id) => PLANS[id]?.name || id;
     state.config = cfg;
     state.user = me.user;
   } catch { /* render anyway */ }
-  // Returning from the payment page: confirm with the server, then show the result on the Account page.
-  const q = new URLSearchParams(location.search);
-  if (q.get('cvcpay') && q.get('tx_ref')) {
-    const txRef = q.get('tx_ref');
-    history.replaceState({}, '', location.pathname + '#/app/account#plans');
-    if (state.user) {
-      try {
-        const { result, user } = await post('/billing/verify', { txRef });
-        state.user = user;
-        if (result.status === 'succeeded') toast(`Payment received. You are now on ${user.plan.name}.`);
-        else if (result.status === 'pending') toast('Your payment is still being confirmed. This page will update once it goes through.', 'info');
-        else if (result.status === 'mismatch') toast('The amount received did not match. Please contact support with your payment reference.', 'error');
-        else toast('The payment was not completed, so you have not been charged.', 'error');
-      } catch (e) { toast(e.message, 'error'); }
-    }
+  if (new URLSearchParams(location.search).get('cvcpay')) history.replaceState({}, '', location.pathname + '#/app/account');
+  if (false) {
   } else if (back?.error) { history.replaceState({}, '', location.pathname + '#/login'); toast(back.error, 'error'); }
   else if (back?.type === 'recovery') history.replaceState({}, '', location.pathname + '#/reset');
   else if (back && state.user) history.replaceState({}, '', location.pathname + '#/app');

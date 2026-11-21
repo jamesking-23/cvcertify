@@ -14,7 +14,6 @@ export async function list() {
   const atLimit = limit != null && resumes.length >= limit;
 
   const create = async () => {
-    if (atLimit) return toast(`Your ${state.user.plan.name} plan includes ${limit} resumes. Upgrade for unlimited.`, 'error');
     const title = h('input', { class: 'input', value: 'My resume', 'aria-label': 'Resume name' });
     const job = h('input', { class: 'input', placeholder: 'Target job title (optional)' });
     const r = await modal({ title: 'New resume', body: h('div', { class: 'stack' }, h('div', { class: 'field' }, h('label', null, 'Name'), title), h('div', { class: 'field' }, h('label', null, 'Target role'), job), h('p', { class: 'hint' }, 'It starts as a copy of your master profile.')), actions: [{ label: 'Cancel', value: false }, { label: 'Create', value: true, class: 'btn-brand' }] });

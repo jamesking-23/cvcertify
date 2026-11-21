@@ -4,7 +4,7 @@ import { h, icon, clear } from '../ui.js';
 import { state, navigate } from '../main.js';
 import { TEMPLATES, COUNTRIES, LETTER_FORMATS } from '../shared/constants.js';
 import { renderPaper, renderLetter } from '../preview.js';
-import { pricingCards, typewriter } from './marketing.js';
+import { typewriter } from './marketing.js';
 import { sampleContent, SAMPLE_ID, SAMPLE_LETTER, SAMPLE_JOB } from './sample.js';
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -76,7 +76,7 @@ function heroSection() {
       typewriter(),
       h('p', { class: 'lead' }, 'Write your experience once. CV-Certify shapes it into a resume and cover letter for each job, in the format employers in that country expect, then stamps the finished document with an ID anyone can check.'),
       h('div', { class: 'row row-wrap', style: 'gap:18px;align-items:center' }, cta('Build your profile, free'), h('a', { href: '/verify', class: 'textlink' }, 'Check a document ID', icon('arrow'))),
-      h('p', { class: 'fineprint' }, 'The free plan includes 2 resumes and 3 AI rewrites a month. No card needed.')),
+      h('p', { class: 'fineprint' }, 'Free for everyone. No card needed.')),
     hero()));
 }
 
@@ -211,12 +211,12 @@ function recruiters() {
       h('div', null, h('b', null, 'What it doesn’t'), h('p', null, 'It doesn’t independently verify employers, degrees or references. Treat it as proof of integrity, not a background check.'))), 140)));
 }
 
-/* ---------- pricing ---------- */
-function pricing() {
-  return h('section', { class: 'lp-sec', id: 'pricing' }, h('div', { class: 'lp-wrap center' },
-    reveal(h('h2', null, 'Priced in shillings, shown in your currency')),
-    reveal(h('p', { class: 'lp-sub', style: 'margin:12px auto 0' }, 'Start free. Pay when you’re applying a lot and want unlimited tailoring.'), 80),
-    pricingCards()));
+/* ---------- free for everyone ---------- */
+function freeBand() {
+  return h('section', { class: 'lp-sec', id: 'free' }, h('div', { class: 'lp-wrap center' },
+    reveal(h('h2', null, 'Free. All of it.')),
+    reveal(h('p', { class: 'lp-sub', style: 'margin:12px auto 0' }, 'Unlimited resumes, every template, cover letters, the ATS scanner, interview prep, skill roadmaps, a public portfolio and document verification. No card, no trial, no paid tier.'), 80),
+    reveal(h('div', { style: 'margin-top:28px' }, cta('Build your profile, free')), 140)));
 }
 
 /* ---------- questions ---------- */
@@ -242,5 +242,5 @@ function closing() {
 
 export function landing() {
   document.body.classList.add('lp-body');
-  return h('div', { class: 'lp' }, heroSection(), facts(), story(), countries(), shelf(), recruiters(), pricing(), faq(), closing());
+  return h('div', { class: 'lp' }, heroSection(), facts(), story(), countries(), shelf(), recruiters(), freeBand(), faq(), closing());
 }

@@ -1,36 +1,18 @@
 // Shared by the browser and the Netlify function. Plain ES module, no dependencies.
 
+// Everything is free. AI writing has a monthly fair-use allowance so the free AI quota lasts for everyone.
 export const PLANS = {
   starter: {
     id: 'starter',
-    name: 'Starter',
+    name: 'Free',
     price: 0,
-    tagline: 'Build your profile and try AI-assisted writing.',
-    features: ['1 master profile', '2 resumes', '3 AI rewrites/mo', 'Document verification'],
-    limits: { resumes: 2, rewrites: 3, letters: 0, ats: false, interview: false, roadmap: false, portfolio: false },
-  },
-  professional: {
-    id: 'professional',
-    name: 'Professional',
-    price: 2500, // UGX per month
-    tagline: 'For active job seekers.',
-    features: ['Unlimited resumes & versions', 'Unlimited AI tailoring', 'Cover letter generator', 'ATS scanner & interview prep'],
-    limits: { resumes: Infinity, rewrites: Infinity, letters: Infinity, ats: true, interview: true, roadmap: false, portfolio: false },
-  },
-  career: {
-    id: 'career',
-    name: 'Career+',
-    price: 5000, // UGX per month
-    tagline: 'Full professional branding suite.',
-    features: ['Everything in Professional', 'Portfolio hosting & custom domain', 'Skill gap roadmaps', 'Priority AI assistant'],
-    limits: { resumes: Infinity, rewrites: Infinity, letters: Infinity, ats: true, interview: true, roadmap: true, portfolio: true },
+    tagline: 'Everything, free for everyone.',
+    features: ['Unlimited resumes & versions', 'All templates and letter formats', 'AI writing, tailoring, ATS scan, interview prep', 'Skill roadmaps, portfolio & document verification'],
+    limits: { resumes: Infinity, rewrites: 200, letters: Infinity, ats: true, interview: true, roadmap: true, portfolio: true },
   },
 };
 
-export const PLAN_ORDER = ['starter', 'professional', 'career'];
-
-// Which plan unlocks a feature first.
-export const FEATURE_PLAN = { letters: 'professional', ats: 'professional', interview: 'professional', roadmap: 'career', portfolio: 'career' };
+export const PLAN_ORDER = ['starter'];
 
 export const COUNTRIES = {
   US: { id: 'US', name: 'United States', doc: 'Resume', paper: 'Letter', dob: false, nationality: false, referees: false, note: 'No photo, age, or marital status. One page preferred; two for 10+ years of experience.' },

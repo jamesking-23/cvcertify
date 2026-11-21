@@ -1,9 +1,8 @@
 import { h, icon } from '../ui.js';
-import { PLANS, PLAN_ORDER, TEMPLATES, COUNTRIES } from '../shared/constants.js';
+import { TEMPLATES, COUNTRIES } from '../shared/constants.js';
 import { sampleContent } from './sample.js';
 import { renderPaper } from '../preview.js';
 import { state } from '../main.js';
-import { formatPrice, isApprox } from '../shared/currency.js';
 
 const PHRASES = ['A job for everyone.', 'An identity for everyone.'];
 
@@ -30,22 +29,6 @@ export function typewriter() {
     }
   })();
   return el;
-}
-
-export function pricingCards() {
-  const loggedIn = !!state.user;
-  return h('div', { class: 'grid grid-3', style: 'align-items:stretch;max-width:960px;margin:48px auto 0' },
-    PLAN_ORDER.map((id) => {
-      const p = PLANS[id];
-      const featured = id === 'professional';
-      const current = loggedIn && state.user.plan.id === id;
-      return h('div', { class: `price-card${featured ? ' featured' : ''}` },
-        h('div', { class: 'tier' }, p.name),
-        h('div', { class: 'price' }, p.price === 0 ? 'Free' : [formatPrice(p.price), h('small', null, '/mo'), isApprox() && h('small', { title: 'Estimated from UGX. Final billing is in UGX.', style: 'display:block;margin-top:2px' }, `≈ from UGX ${p.price.toLocaleString('en-US')}`)]),
-        h('p', { class: 'muted small' }, p.tagline),
-        h('ul', null, p.features.map((f) => h('li', null, icon('check'), f))),
-        h('a', { href: loggedIn ? '/app/account#plans' : `/signup?plan=${id}`, class: `btn btn-outline btn-block`, 'aria-label': `${current ? 'Current plan' : 'Get started with'} ${p.name}` }, current ? 'Your current plan' : loggedIn ? 'Choose plan' : 'Get started'));
-    }));
 }
 
 export function templatesPage() {

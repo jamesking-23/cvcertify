@@ -242,5 +242,5 @@ export function assistantReply(message, content, job) {
   if (/no experience|first job|graduate|fresh/.test(m)) return `Without work history, lead with ${f.hasEducation ? 'your education' : 'your skills'}, then projects, certificates and volunteering. Show what you built or finished, and name the tools you used. A short summary that says what role you want is better than a long one.`;
   if (/cover letter|letter/.test(m)) return 'Open the Cover letters page, pick a resume, paste the job description and generate a draft. It only uses what is on your CV, so a complete profile gives a better letter.';
   if (/salary|pay/.test(m)) return 'Look up the typical range for this role in your city, decide a number you would be happy with, and give a range rather than one figure. I can help you practise the wording.';
-  return 'I can help with your summary, bullet points, cover letter, interview questions and what to do when you have little experience. Ask me about any of those. For full conversational answers, the site owner needs to connect an AI key.';
+  return 'I can help with your summary, bullet points, cover letter, interview questions and what to do when you have little experience. Ask me about any of those. The full AI assistant is busy right now, so try again in a moment for a more detailed answer.';
 }

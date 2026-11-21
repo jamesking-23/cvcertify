@@ -51,9 +51,8 @@ async function toolShell({ title, sub, feature, runLabel, run, render }) {
     h('div', { class: 'card stack' }, h('div', { class: 'form-grid' }, h('div', { class: 'field' }, h('label', null, 'Resume'), sel), h('div', { class: 'field' }, h('label', null, 'Job title'), jt), h('div', { class: 'field span-2' }, h('label', null, 'Job description'), jd)), h('div', null, btn)), out);
 }
 
-const PLAN_FOR = { ats: 'Professional', interview: 'Professional', letters: 'Professional', roadmap: 'Career+', portfolio: 'Career+' };
-export function upgradeCard(title, feature) {
-  return h('div', { style: 'max-width:640px' }, h('div', { class: 'page-head' }, h('h1', null, title)), h('div', { class: 'card center', style: 'padding:40px' }, h('div', { class: 'icon-badge', style: 'margin:0 auto 14px;width:52px;height:52px;background:rgba(224,184,114,.18);color:var(--gold-500)' }, icon('lock')), h('h3', null, `Available on ${PLAN_FOR[feature]}`), h('p', { class: 'muted', style: 'margin:8px 0 20px' }, `Upgrade to unlock ${title.toLowerCase()} and more.`), h('a', { href: '/app/account#plans', class: 'btn btn-brand' }, 'See plans')));
+export function upgradeCard(title) {
+  return h('div', { style: 'max-width:640px' }, h('div', { class: 'page-head' }, h('h1', null, title)), h('div', { class: 'card center', style: 'padding:40px' }, h('p', { class: 'muted' }, 'This tool is not available right now. Please try again shortly.')));
 }
 
 export const atsPage = () => toolShell({ title: 'ATS scanner', sub: 'Score a resume against a job description and see exactly what’s missing.', feature: 'ats', runLabel: 'Scan resume', run: (b) => post('/ai/ats', b), render: atsResultView });

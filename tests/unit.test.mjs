@@ -77,12 +77,13 @@ test('letter parsing separates salutation, body and sign-off so each layout can 
   assert.equal(letterParts({ text: 'Dear Ms Okello,\n\nHi.', job: {} }).closing, 'Yours sincerely,');
 });
 
-test('every template and letter format id is registered, and prices are in UGX', async () => {
+test('every template and letter format id is registered, and everything is free', async () => {
   const { TEMPLATES, LETTER_FORMATS, PLANS } = await import('../public/js/shared/constants.js');
   for (const id of ['classic', 'modern', 'compact', 'executive', 'academic', 'timeline', 'rail']) assert.ok(TEMPLATES.some((t) => t.id === id), id);
   assert.deepEqual(LETTER_FORMATS.map((f) => f.id), ['formal', 'right', 'letterhead']);
-  assert.equal(PLANS.professional.price, 2500);
-  assert.equal(PLANS.career.price, 5000);
+  assert.deepEqual(Object.keys(PLANS), ['starter']);
+  assert.equal(PLANS.starter.price, 0);
+  assert.equal(PLANS.starter.limits.roadmap, true);
 });
 
 // ---- AI writer (offline engine) ----
@@ -123,4 +124,21 @@ test('bullet rewrite returns grammatical variants without inventing numbers', as
   const out = await ai.rewriteBullets({ bullets: ['Responsible for dispatch scheduling', 'helped reduce customer complaints'], role: 'x', company: 'y' });
   assert.equal(out.variants.length, 2);
   for (const v of out.variants.flat()) { assert.ok(!/\d/.test(v), v); assert.ok(!/^responsible\b/i.test(v), v); }
+});
+
+test('when Gemini fails or is rate limited, the built-in writer answers instead of an error', async () => {
+  const ai = await import('../supabase/functions/cvc-api/ai.mjs');
+  const realFetch = globalThis.fetch;
+  process.env.GEMINI_API_KEY = 'test-key-not-real';
+  try {
+    const content = { ...emptyContent(), personal: { fullName: 'A B' }, skills: ['Excel'], experience: [{ role: 'Clerk', company: 'X', start: '2020-01', current: true, bullets: ['did filing'] }] };
+    globalThis.fetch = async () => new Response('quota', { status: 429 });
+    const quiet = console.error; console.error = () => {};
+    const r = await ai.writeSummary({ content, job: null });
+    console.error = quiet;
+    assert.equal(r.mode, 'basic');
+    assert.ok(r.options.length > 1);
+    globalThis.fetch = async () => Response.json({ candidates: [{ content: { parts: [{ text: '[{"label":"Short","text":"Clerk who keeps records accurate."}]' }] } }] });
+    assert.equal((await ai.writeSummary({ content, job: null })).mode, 'ai');
+  } finally { globalThis.fetch = realFetch; delete process.env.GEMINI_API_KEY; }
 });

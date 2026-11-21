@@ -57,7 +57,7 @@ export function loginPage({ query }) {
     }
   } }, err, email.node, pw.node, submit, h('a', { href: '/forgot', class: 'small', style: 'text-decoration:underline' }, 'Forgot password?'));
   return shell('Welcome back', 'Sign in to continue building your career profile.', form, googleButton() && h('div', { class: 'divider' }, 'or continue with'), googleButton(),
-    h('p', { class: 'center muted small' }, 'New to CV-Certify? ', h('a', { href: '/signup' + (query.get('plan') ? '?plan=' + query.get('plan') : ''), style: 'font-weight:600;color:var(--ink-950)' }, 'Create an account')));
+    h('p', { class: 'center muted small' }, 'New to CV-Certify? ', h('a', { href: '/signup', style: 'font-weight:600;color:var(--ink-950)' }, 'Create an account')));
 }
 
 export function signupPage({ query }) {
@@ -78,8 +78,7 @@ export function signupPage({ query }) {
         return;
       }
       setUser(out.user);
-      const plan = query.get('plan');
-      navigate(plan && plan !== 'starter' ? '/app/account#plans' : '/app/profile');
+      navigate('/app/profile');
     } catch (ex) {
       showError(err, ex.message);
       setBusy(submit, false);
