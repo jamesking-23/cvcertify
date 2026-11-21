@@ -18,9 +18,11 @@ function completeness(c) {
 
 export default async function dashboard() {
   const [{ content }, { resumes }] = await Promise.all([get('/profile'), get('/resumes')]);
-  const { checks, pct } = completeness(content);
+  const { checks: profileChecks, pct } = completeness(content);
+  // The checklist goes past the profile: make a resume, then certify it.
+  const checks = [...profileChecks, ['Create your first resume', resumes.length > 0], ['Certify a resume to get a public verification ID', resumes.some((r) => r.docId)]];
   const first = state.user.name.split(' ')[0];
-  const next = checks.find((c) => !c[1]);
+  const next = profileChecks.find((c) => !c[1]);
   const certified = resumes.filter((r) => r.docId && !r.changedSinceCertified).length;
 
   return h('div', null,
