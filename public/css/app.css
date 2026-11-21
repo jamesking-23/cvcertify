@@ -441,7 +441,7 @@ body.lp-body { --lp-paper: #f1ece0; --lp-paper-2: #e8e1d1; --lp-card: #fbf8f1; -
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* hero */
-.lp-hero { padding: clamp(40px, 6vw, 88px) 0 clamp(56px, 7vw, 96px); }
+.lp-hero { padding: clamp(40px, 6vw, 88px) 0 clamp(56px, 7vw, 96px); overflow-x: clip; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: clamp(32px, 5vw, 72px); align-items: start; }
 .hero-copy { padding-top: clamp(0px, 6vw, 96px); }
 .lp h1.typewriter { font-size: clamp(46px, 6.4vw, 96px); line-height: .98; margin: 22px 0 26px; justify-items: start; text-align: left; letter-spacing: -.035em; }
