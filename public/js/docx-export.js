@@ -65,7 +65,7 @@ export async function resumeToDocx({ content, template, country, docId, verifyUr
   const centred = ['classic', 'executive', 'academic'].includes(template);
   const align = centred ? AlignmentType.CENTER : AlignmentType.LEFT;
   const contactList = [p.email, p.phone, p.location, p.website, p.linkedin, p.github].filter(Boolean);
-  const personalList = [rules.dob && p.dob ? `Date of birth: ${p.dob}` : '', rules.nationality && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
+  const personalList = [c.options?.showPersonal && p.dob ? `Date of birth: ${p.dob}` : '', c.options?.showPersonal && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
   const showReferees = rules.referees && c.referees?.length;
 
   if (template === 'rail') {
@@ -93,11 +93,13 @@ export async function resumeToDocx({ content, template, country, docId, verifyUr
       const band = (t, o = {}) => new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, shading: { type: ShadingType.CLEAR, fill: 'E8EDF6', color: 'auto' }, ...o, children: [t] });
       body.push(band(run(p.fullName || 'Your Name', { bold: true, size: 40, color: st.head }), { spacing: { before: 0, after: 0 } }));
       if (p.headline) body.push(band(run(p.headline, { color: st.accent, size: size + 2 }), { spacing: { after: 0 } }));
-      if (contactList.length) body.push(band(run(contactList.join('  |  '), { size: size - 1 }), { spacing: { after: 60 } }));
+      if (contactList.length) body.push(band(run(contactList.join('  |  '), { size: size - 1 }), { spacing: { after: p.registration ? 0 : 60 } }));
+      if (p.registration) body.push(band(run(p.registration, { size: size - 1 }), { spacing: { after: 60 } }));
     } else {
       body.push(new Paragraph({ alignment: align, spacing: { after: 40 }, children: [run(p.fullName || 'Your Name', { bold: true, size: 40, color: st.head })] }));
       if (p.headline) body.push(new Paragraph({ alignment: align, spacing: { after: 40 }, children: [run(p.headline, { color: st.accent, size: size + 2 })] }));
-      if (contactList.length) body.push(new Paragraph({ alignment: align, spacing: { after: 80 }, children: [run(contactList.join('  |  '), { size: size - 1 })] }));
+      if (contactList.length) body.push(new Paragraph({ alignment: align, spacing: { after: p.registration ? 20 : 80 }, children: [run(contactList.join('  |  '), { size: size - 1 })] }));
+      if (p.registration) body.push(new Paragraph({ alignment: align, spacing: { after: 80 }, children: [run(p.registration, { size: size - 1 })] }));
     }
     if (personalList.length) body.push(new Paragraph({ alignment: align, spacing: { after: 80 }, children: [run(personalList.join('  |  '), { size: size - 1 })] }));
 
@@ -115,10 +117,12 @@ export async function resumeToDocx({ content, template, country, docId, verifyUr
         new TableRow({ tableHeader: true, children: head.map((t, i) => cell([small(t, { bold: true })], widths[i], { borders: allThin, shading: { type: ShadingType.CLEAR, fill: 'E8EDF6', color: 'auto' } })) }),
         ...rows.map((r) => new TableRow({ cantSplit: true, children: r.map((t, i) => cell([small(t)], widths[i], { borders: allThin })) })),
       ], widths);
-      if (c.education?.length) body.push(heading('Education and qualifications'), grid(['Qualification', 'Institution', 'Period'], c.education.map((e) => [`${e.degree}${e.field ? ' in ' + e.field : ''}${e.details ? ' – ' + e.details : ''}`, e.school || '', dateRange(e)]), [4700, 3600, 2000]));
-      if (c.experience?.length) body.push(heading('Experience'), ...c.experience.flatMap((e) => exp(e)));
+      if (c.education?.length) body.push(heading('Education and qualifications'), grid(['Qualification', 'Institution', 'Period'], c.education.map((e) => [`${e.degree}${e.field ? ' in ' + e.field : ''}${e.details ? ' – ' + e.details : ''}`, e.school || '', [(e.start || '').slice(0, 4), e.current ? 'Present' : (e.end || '').slice(0, 4)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' – ')]), [4700, 3600, 2000]));
+      const interns = (c.experience || []).length > 0 && c.experience.every((e) => /intern|trainee|attach/i.test(e.role || ''));
+      if ((c.experience || []).length > 1) body.push(heading(interns ? 'Internship overview' : 'Experience overview'), grid(['Period', 'Role', 'Organisation / Location'], c.experience.map((e) => [dateRange(e), e.role || '', [e.company, e.location].filter(Boolean).join(' — ')]), [2000, 3000, 5300]));
+      if (c.experience?.length) body.push(heading(interns ? 'Internship experience' : 'Work experience'), ...c.experience.flatMap((e) => exp(e)));
       if (c.projects?.length) body.push(heading('Projects'), ...c.projects.flatMap((e) => proj(e)));
-      if (c.certifications?.length) body.push(heading('Certifications'), grid(['Certificate', 'Awarded by', 'Year'], c.certifications.map((e) => [e.name, e.issuer || '', e.year || '']), [4700, 3600, 2000]));
+      if (c.certifications?.length) body.push(heading('Professional membership and certification'), grid(['Certificate', 'Awarded by', 'Year'], c.certifications.map((e) => [e.name, e.issuer || '', e.year || '']), [4700, 3600, 2000]));
     } else {
       if (c.experience?.length) body.push(heading('Experience'), ...c.experience.flatMap((e) => exp(e)));
       if (c.projects?.length) body.push(heading('Projects'), ...c.projects.flatMap((e) => proj(e)));
@@ -132,6 +136,8 @@ export async function resumeToDocx({ content, template, country, docId, verifyUr
       for (const r of c.referees) body.push(para(`${r.name}${r.title ? ', ' + r.title : ''}${r.contact ? ' – ' + r.contact : ''}`));
     }
   }
+
+  if (c.footnote || template === 'academic') body.push(new Paragraph({ spacing: { before: 160 }, children: [run(c.footnote || 'Supporting documents are available upon request.', { italics: true, size: size - 3 })] }));
 
   if (docId) {
     body.push(

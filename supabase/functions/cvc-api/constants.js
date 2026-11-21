@@ -44,7 +44,7 @@ export const LETTER_FORMATS = [
 export const LANGUAGE_LEVELS = ['Native', 'Fluent', 'Advanced', 'Intermediate', 'Basic'];
 
 export const emptyContent = () => ({
-  personal: { fullName: '', headline: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '', dob: '', nationality: '' },
+  personal: { fullName: '', headline: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '', dob: '', nationality: '', registration: '' },
   summary: '',
   experience: [],
   education: [],
@@ -53,6 +53,8 @@ export const emptyContent = () => ({
   certifications: [],
   languages: [],
   referees: [],
+  footnote: '',
+  options: { showPersonal: false },
 });
 
 export function formatMonth(ym) {
@@ -72,7 +74,7 @@ export function dateRange(item) {
 
 export const resumeToText = (c) => {
   const p = c.personal || {};
-  const lines = [p.fullName, p.headline, [p.email, p.phone, p.location].filter(Boolean).join(' | '), c.summary];
+  const lines = [p.fullName, p.headline, p.registration, [p.email, p.phone, p.location].filter(Boolean).join(' | '), c.summary];
   for (const e of c.experience || []) lines.push(`${e.role} ${e.company} ${e.location || ''} ${dateRange(e)}`, ...(e.bullets || []));
   for (const e of c.education || []) lines.push(`${e.degree} ${e.field || ''} ${e.school} ${e.details || ''}`);
   for (const e of c.projects || []) lines.push(`${e.name} ${e.tech || ''} ${e.description || ''}`);

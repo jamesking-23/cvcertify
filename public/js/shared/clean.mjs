@@ -49,6 +49,8 @@ export function cleanContent(input) {
     skills: arr(c.skills, 80).map((s) => str(s, 60)).filter(Boolean),
     certifications: arr(c.certifications, 20).map((e) => ({ id: id(e?.id), name: str(e?.name, 200), issuer: str(e?.issuer, 160), year: str(e?.year, 10) })),
     languages: arr(c.languages, 12).map((e) => ({ id: id(e?.id), name: str(e?.name, 60), level: str(e?.level, 40) })),
+    footnote: text(c.footnote, 300),
+    options: { showPersonal: !!(c.options && c.options.showPersonal) },
     referees: arr(c.referees, 4).map((e) => ({ id: id(e?.id), name: str(e?.name, 120), title: str(e?.title, 160), contact: str(e?.contact, 200) })),
   };
 }
@@ -57,6 +59,7 @@ export const cleanJob = (j) => ({
   title: str(j?.title, 160),
   company: str(j?.company, 160),
   description: text(j?.description, 12000),
+  notes: text(j?.notes, 600),
 });
 
 export const cleanTemplate = (t) => (TEMPLATES.some((x) => x.id === t) ? t : 'classic');

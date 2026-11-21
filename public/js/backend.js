@@ -151,7 +151,7 @@ on('POST', /^\/resumes$/, async (_, b) => {
   let content;
   if (b.fromResumeId) content = one(await rest('GET', 'cvc_resumes', { query: `select=content&${eq(b.fromResumeId)}` }), 'Resume').content;
   else content = one(await rest('GET', 'cvc_profiles', { query: 'select=content' }), 'Profile').content || emptyContent();
-  const row = one(await rest('POST', 'cvc_resumes', { prefer: REP, body: { title: cleanTitle(b.title, 'My resume'), country: cleanCountry(b.country), template: cleanTemplate(b.template), content: cleanContent(content), job: cleanJob(b.job) } }), 'Resume');
+  const row = one(await rest('POST', 'cvc_resumes', { prefer: REP, body: { title: cleanTitle(b.title, 'My resume'), country: cleanCountry(b.country), template: cleanTemplate(b.template || (cleanCountry(b.country) === 'AF' ? 'academic' : 'classic')), content: cleanContent(content), job: cleanJob(b.job) } }), 'Resume');
   return { resume: resumeView(row) };
 });
 on('GET', /^\/resumes\/([^/]+)$/, async ([id]) => {

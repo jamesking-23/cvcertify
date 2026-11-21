@@ -39,6 +39,5 @@ export default function assistantPage() {
 
   return h('div', { style: 'max-width:780px' },
     h('div', { class: 'page-head' }, h('div', null, h('h1', null, 'AI assistant'), h('p', null, 'A career coach that knows your profile.'))),
-    !state.config.ai && h('div', { class: 'alert alert-warn', style: 'margin-bottom:16px' }, icon('alert'), 'The assistant needs an AI key to be configured on this server.'),
     h('div', { class: 'card chat' }, log, starters, h('div', { class: 'row', style: 'align-items:flex-end' }, h('div', { class: 'grow' }, input), send)));
 }

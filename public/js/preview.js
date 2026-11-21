@@ -9,6 +9,7 @@ const prettyDate = (v) => {
   if (!m) return v || '';
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
 };
+const years = (e) => { const a = (e.start || '').slice(0, 4), b = e.current ? 'Present' : (e.end || '').slice(0, 4); return a && b && a !== b ? `${a} – ${b}` : a || b || ''; };
 const eduTitle = (e) => `${e.degree || ''}${e.field ? ' in ' + e.field : ''}`;
 const certLine = (e) => `${e.name}${e.issuer ? ' – ' + e.issuer : ''}${e.year ? ' (' + e.year + ')' : ''}`;
 const langLine = (l) => `${l.name}${l.level ? ' (' + l.level + ')' : ''}`;
@@ -21,7 +22,8 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
   const row = (l, r) => h('div', { class: 'r' }, h('span', null, l), h('span', null, r || ''));
   const contactBits = [p.email, p.phone, p.location, p.website, p.linkedin, p.github].filter(Boolean);
   const contact = contactBits.join('  ·  ');
-  const personalBits = [rules.dob && p.dob ? `Date of birth: ${prettyDate(p.dob)}` : '', rules.nationality && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
+  const showPersonal = !!c.options?.showPersonal;
+  const personalBits = [showPersonal && p.dob ? `Date of birth: ${prettyDate(p.dob)}` : '', showPersonal && p.nationality ? `Nationality: ${p.nationality}` : ''].filter(Boolean);
   const personal = personalBits.join('  ·  ');
   const showRefs = rules.referees && c.referees?.length > 0;
   const bullets = (e) => e.bullets?.length > 0 && h('ul', null, e.bullets.map((b) => h('li', null, b)));
@@ -32,18 +34,19 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
   /* ---------- academic: shaded header, ruled sections, bordered tables ---------- */
   if (template === 'academic') {
     const exp = c.experience || [];
+    const interns = exp.length > 0 && exp.every((e) => /intern|trainee|attach/i.test(e.role || ''));
     return h('article', { class: cls, ...label },
-      h('header', { class: 'a-head' }, h('h1', null, p.fullName || 'Your Name'), p.headline && h('div', { class: 'headline' }, p.headline), contactBits.length > 0 && h('div', { class: 'contact' }, contact), personalBits.length > 0 && h('div', { class: 'contact' }, personal)),
+      h('header', { class: 'a-head' }, h('h1', null, p.fullName || 'Your Name'), p.headline && h('div', { class: 'headline' }, p.headline), contactBits.length > 0 && h('div', { class: 'contact' }, contact), p.registration && h('div', { class: 'contact' }, p.registration), personalBits.length > 0 && h('div', { class: 'contact' }, personal)),
       c.summary && sec('Professional profile', h('p', null, c.summary)),
-      c.education?.length > 0 && sec('Academic qualifications', h('table', { class: 'q' }, h('tbody', null, c.education.map((e) => h('tr', null, h('td', null, h('b', null, eduTitle(e) || e.school), e.details && h('div', { class: 'sub' }, e.details)), h('td', null, [e.school, dateRange(e)].filter(Boolean).join(', '))))))),
+      c.education?.length > 0 && sec('Academic qualifications', h('table', { class: 'q' }, h('tbody', null, c.education.map((e) => h('tr', null, h('td', null, h('b', null, eduTitle(e) || e.school), e.details && h('div', { class: 'sub' }, e.details)), h('td', null, [e.school, years(e)].filter(Boolean).join(', '))))))),
       c.certifications?.length > 0 && sec('Professional membership and certification', c.certifications.map((e) => h('p', null, certLine(e)))),
-      exp.length > 1 && sec('Experience overview', h('table', { class: 'ov' }, h('thead', null, h('tr', null, h('th', null, 'Period'), h('th', null, 'Role'), h('th', null, 'Organisation / Location'))), h('tbody', null, exp.map((e) => h('tr', null, h('td', null, dateRange(e)), h('td', null, e.role), h('td', null, [e.company, e.location].filter(Boolean).join(', '))))))),
-      exp.length > 0 && sec('Experience', exp.map((e) => h('div', { class: 'item' }, h('div', { class: 'ttl' }, h('b', null, e.role || ''), e.company && h('b', null, ` — ${e.company}`)), h('div', { class: 'sub' }, [e.location, dateRange(e)].filter(Boolean).join('  |  ')), bullets(e)))),
+      exp.length > 1 && sec(interns ? 'Internship overview' : 'Experience overview', h('table', { class: 'ov' }, h('thead', null, h('tr', null, h('th', null, 'Period'), h('th', null, 'Role'), h('th', null, 'Organisation / Location'))), h('tbody', null, exp.map((e) => h('tr', null, h('td', null, dateRange(e)), h('td', null, e.role), h('td', null, [e.company, e.location].filter(Boolean).join(', '))))))),
+      exp.length > 0 && sec(interns ? 'Internship experience' : 'Work experience', exp.map((e) => h('div', { class: 'item' }, h('div', { class: 'ttl' }, h('b', null, e.role || ''), e.company && h('b', null, ` — ${e.company}`)), h('div', { class: 'sub' }, [e.location, dateRange(e)].filter(Boolean).join('  |  ')), bullets(e)))),
       c.projects?.length > 0 && sec('Projects', c.projects.map((e) => h('div', { class: 'item' }, h('div', { class: 'ttl' }, h('b', null, e.name), e.tech && h('span', null, ` — ${e.tech}`)), e.description && h('div', null, e.description)))),
       c.skills?.length > 0 && sec('Skills', h('ul', { class: 'cols' }, c.skills.map((s) => h('li', null, s)))),
       c.languages?.length > 0 && sec('Languages', c.languages.map((l) => h('div', null, langLine(l)))),
       showRefs && sec('Referees', h('div', { class: 'two' }, c.referees.map((r) => h('div', null, h('div', null, r.name), r.title && h('div', null, r.title), r.contact && h('div', null, r.contact))))),
-      h('p', { class: 'fine' }, 'Supporting documents are available upon request.'),
+      h('p', { class: 'fine' }, c.footnote || 'Supporting documents are available upon request.'),
       verified);
   }
 
@@ -60,6 +63,7 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
       c.certifications?.length > 0 && sec('Certifications', c.certifications.map((e) => line(e.year, certLine({ ...e, year: '' })))),
       c.languages?.length > 0 && sec('Languages', line('', c.languages.map(langLine).join(' · '))),
       showRefs && sec('Referees', c.referees.map((r) => line('', refLine(r)))),
+      c.footnote && h('p', { class: 'fine' }, c.footnote),
       verified);
   }
 
@@ -80,6 +84,7 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
           c.experience?.length > 0 && sec('Experience', c.experience.map((e) => h('div', null, row(`${e.role || ''}${e.company ? ', ' + e.company : ''}`, dateRange(e)), e.location && h('div', { class: 'sub' }, e.location), bullets(e)))),
           c.education?.length > 0 && sec('Education', c.education.map((e) => h('div', null, row(`${eduTitle(e)}${e.school ? ', ' + e.school : ''}`, dateRange(e)), e.details && h('div', { class: 'sub' }, e.details)))),
           c.projects?.length > 0 && sec('Projects', c.projects.map((e) => h('div', null, row(e.name, e.tech), e.description && h('div', null, e.description)))))),
+      c.footnote && h('p', { class: 'fine' }, c.footnote),
       verified);
   }
 
@@ -97,6 +102,7 @@ export function renderPaper({ content: c, template = 'classic', country = 'US', 
     c.certifications?.length > 0 && sec('Certifications', h('ul', null, c.certifications.map((e) => h('li', null, certLine(e))))),
     c.languages?.length > 0 && sec('Languages', h('p', null, c.languages.map(langLine).join(', '))),
     showRefs && sec('Referees', c.referees.map((r) => h('p', null, refLine(r)))),
+    c.footnote && h('p', { class: 'fine' }, c.footnote),
     verified);
 }
 

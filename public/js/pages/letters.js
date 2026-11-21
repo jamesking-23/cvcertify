@@ -34,6 +34,7 @@ export default async function lettersPage() {
     const title = h('input', { class: 'input', value: l.title, 'aria-label': 'Letter name', oninput: () => { l.title = title.value; save(); } });
     const jt = h('input', { class: 'input', value: l.job.title, placeholder: 'Job title', oninput: () => { l.job.title = jt.value; save(); } });
     const jc = h('input', { class: 'input', value: l.job.company, placeholder: 'Company', oninput: () => { l.job.company = jc.value; save(); } });
+    const notes = h('input', { class: 'input', value: l.job.notes || '', placeholder: 'Anything to emphasise? e.g. willing to relocate, available from January (optional)', oninput: () => { l.job.notes = notes.value; save(); } });
     const jd = h('textarea', { class: 'textarea', rows: 8, placeholder: 'Paste the job description…', oninput: () => { l.job.description = jd.value; save(); } });
     jd.value = l.job.description;
     const rs = h('select', { class: 'select', onchange: () => { l.resumeId = rs.value; save(); } }, resumes.map((r) => h('option', { value: r.id, selected: r.id === l.resumeId }, r.title)));
@@ -80,7 +81,7 @@ export default async function lettersPage() {
           h('button', { class: 'btn btn-outline', onclick: async () => { await save.flush(); if (!l.id) return toast('Write something first.', 'error'); try { await download(`/letters/${l.id}/export`, 'cover-letter.docx'); } catch (e) { toast(e.message, 'error'); } } }, icon('download'), 'Word (.docx)'),
           l.id && h('button', { class: 'btn btn-danger', onclick: async () => { if (await confirmDialog('Delete this letter?', 'This cannot be undone.', 'Delete', true)) { await del('/letters/' + l.id); letters.splice(letters.findIndex((x) => x.id === l.id), 1); save.flush = async () => {}; listView(); } } }, icon('trash')))),
       h('div', { class: 'editor' },
-        h('div', { class: 'card stack' }, h('div', { class: 'form-grid' }, h('div', { class: 'field' }, h('label', null, 'Resume'), rs), h('div', { class: 'field' }, h('label', null, 'Tone'), tone), h('div', { class: 'field' }, h('label', null, 'Job title'), jt), h('div', { class: 'field' }, h('label', null, 'Company'), jc), h('div', { class: 'field span-2' }, h('label', null, 'Job description'), jd)), h('div', null, gen)),
+        h('div', { class: 'card stack' }, h('div', { class: 'form-grid' }, h('div', { class: 'field' }, h('label', null, 'Resume'), rs), h('div', { class: 'field' }, h('label', null, 'Tone'), tone), h('div', { class: 'field' }, h('label', null, 'Job title'), jt), h('div', { class: 'field' }, h('label', null, 'Company'), jc), h('div', { class: 'field span-2' }, h('label', null, 'Job description'), jd), h('div', { class: 'field span-2' }, h('label', null, 'Notes for the writer'), notes)), h('div', null, gen)),
         h('div', { class: 'stack' }, h('div', { class: 'card' }, h('div', { class: 'label', style: 'margin-bottom:8px' }, 'Letter text'), body), h('div', { class: 'card stack' }, h('div', { class: 'label' }, 'Layout'), h('div', { class: 'row row-wrap' }, fmtBtns), fmtNote, previewHost))));
   };
 

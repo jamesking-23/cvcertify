@@ -136,8 +136,7 @@ export async function editor({ params }) {
   panels[1].append(h('div', { class: 'stack' },
     h('p', { class: 'muted' }, 'Paste the job you are applying for. AI tailors your wording to it, and the scanner shows which keywords you are missing.'),
     h('div', { class: 'form-grid' }, h('div', { class: 'field' }, h('label', null, 'Job title'), jobTitle), h('div', { class: 'field' }, h('label', null, 'Company'), jobCo), h('div', { class: 'field span-2' }, h('label', null, 'Job description'), jobDesc)),
-    h('div', { class: 'row row-wrap' }, tailorBtn, atsBtn), results,
-    !state.config.ai && h('div', { class: 'alert alert-warn' }, icon('alert'), 'AI is running in basic mode on this server (no API key configured). Tailoring does light clean-up only.')));
+    h('div', { class: 'row row-wrap' }, tailorBtn, atsBtn), results));
 
   /* ---- panel 2: design ---- */
   const tplBtns = TEMPLATES.map((t) => h('button', { type: 'button', class: `tpl t-${t.id}`, 'aria-pressed': t.id === template, onclick: () => { template = t.id; tplBtns.forEach((b, i) => b.setAttribute('aria-pressed', TEMPLATES[i].id === template)); change(); } },

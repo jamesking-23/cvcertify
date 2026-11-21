@@ -131,7 +131,7 @@ function skillTerms(job, n = 12) {
 }
 const asI = (text) => (startsWithVerb(text) ? `I ${lowerFirst(text)}` : null);
 
-export function coverLetter(content, job, tone = 'professional') {
+export function coverLetter(content, job, tone = 'professional', country = 'US') {
   const f = profileFacts(content);
   const role = job?.title || '';
   const org = job?.company || '';
@@ -191,7 +191,8 @@ export function coverLetter(content, job, tone = 'professional') {
       ? ['I would be delighted to talk with you about the role and how I could help. Thank you for taking the time to consider my application.', 'Thank you for your time and consideration. I would really enjoy the chance to speak with you.']
       : ['Thank you for considering my application. I would welcome the opportunity to discuss it further.', 'I would be glad to discuss my application in an interview. Thank you for your time.']));
   const paras = tone === 'concise' ? [p[0], p[p.length - 2] || p[1], p[p.length - 1]].filter(Boolean) : p;
-  return ['Dear Hiring Manager,', ...paras, `Sincerely,\n${f.name || ''}`].join('\n\n');
+  const formal = !['US', 'CA'].includes(country);
+  return [formal ? 'Dear Sir/Madam,' : 'Dear Hiring Manager,', ...paras, `${formal ? 'Yours faithfully,' : 'Sincerely,'}\n${f.name || ''}`].join('\n\n');
 }
 
 /* ---------------- interview, roadmap, assistant ---------------- */

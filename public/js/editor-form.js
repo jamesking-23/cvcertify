@@ -83,8 +83,13 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
     field('Website / portfolio', bound(p, 'website', change, { placeholder: 'yourname.com' })),
     field('LinkedIn', bound(p, 'linkedin', change, { placeholder: 'linkedin.com/in/…' })),
     field('GitHub', bound(p, 'github', change, { placeholder: 'github.com/…' })),
-    field('Date of birth', bound(p, 'dob', change, { type: 'date', min: '1930-01-01', max: new Date().toISOString().slice(0, 10), autocomplete: 'bday' }), { hint: rules.dob ? `Shown on ${rules.name} formats.` : `Not shown on ${rules.name} formats.` }),
-    field('Nationality', bound(p, 'nationality', change), { hint: rules.nationality ? `Shown on ${rules.name} formats.` : `Not shown on ${rules.name} formats.` }));
+    field('Registration or membership line', bound(p, 'registration', change, { placeholder: 'e.g. Student Member UIPE SM/11666 (optional)' }), { span2: true, hint: 'Shown under your contact details.' }),
+    field('Date of birth', bound(p, 'dob', change, { type: 'date', min: '1930-01-01', max: new Date().toISOString().slice(0, 10), autocomplete: 'bday' })),
+    field('Nationality', bound(p, 'nationality', change)),
+    field('Note at the foot of the CV', bound(c, 'footnote', change, { placeholder: 'e.g. Copies of transcripts are available upon request. (optional)' }), { span2: true }),
+    h('label', { class: 'check span-2', style: 'display:flex;gap:10px;align-items:center;cursor:pointer' },
+      h('input', { type: 'checkbox', checked: !!c.options?.showPersonal, onchange: (ev) => { c.options = { ...(c.options || {}), showPersonal: ev.target.checked }; change(); } }),
+      h('span', null, 'Show date of birth and nationality on this resume ', h('span', { class: 'hint' }, rules.dob || rules.nationality ? `(common in ${rules.name}, but optional)` : `(not usual in ${rules.name})`))));
 
   const summary = () => {
     const ta = bound(c, 'summary', change, { rows: 4, placeholder: '2–4 sentences: who you are, what you do best, what you want next.' }, 'textarea');

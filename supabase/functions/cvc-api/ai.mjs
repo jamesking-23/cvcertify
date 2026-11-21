@@ -13,34 +13,51 @@ export const aiEnabled = () => !!env('GEMINI_API_KEY');
 const useAi = (opts) => aiEnabled() && !opts?.offline;
 export const basicBullet = (b) => offline.improveBullet(b)[0];
 
-// Google Gemini (free tier). Key and model come from Edge Function secrets, never from code.
-async function generate({ system, user, maxTokens = 2000, temperature = 0.8, json = false }) {
-  const model = env('GEMINI_MODEL') || 'gemini-2.5-flash';
-  const generationConfig = { maxOutputTokens: Math.max(maxTokens, 1024) };
+// Google Gemini (free tier). Key comes from the GEMINI_API_KEY secret, never from code.
+// Models get retired or hit their own free-tier limits, so we try a short list in order and remember the one that works.
+const MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+let goodModel = null;
+const modelList = () => [...new Set([env('GEMINI_MODEL'), goodModel, ...MODELS].filter(Boolean))];
+
+async function callGemini(model, { system, user, maxTokens, temperature, json }, withThinking) {
+  // Newer models "think" before answering and that counts against the output budget, so leave generous room.
+  const generationConfig = { maxOutputTokens: Math.max(maxTokens * 3, 4096) };
   if (model.startsWith('gemini-2')) generationConfig.temperature = Math.min(temperature, 2);
-  if (model.startsWith('gemini-2.5-flash') && !model.includes('lite')) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  if (withThinking && /^gemini-3/.test(model)) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
   if (json) generationConfig.responseMimeType = 'application/json';
-  let res;
-  try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': env('GEMINI_API_KEY') },
-      body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig }),
-      signal: AbortSignal.timeout(45000),
-    });
-  } catch (e) {
-    console.error('Gemini network error', String(e).slice(0, 200));
-    throw new HttpError(502, 'The AI service did not respond.', 'ai_error');
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': env('GEMINI_API_KEY') },
+    body: JSON.stringify({ system_instruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig }),
+    signal: AbortSignal.timeout(50000),
+  });
+}
+
+async function generate({ system, user, maxTokens = 2000, temperature = 0.8, json = false }) {
+  const args = { system, user, maxTokens, temperature, json };
+  let lastStatus = 0;
+  for (const model of modelList()) {
+    let res;
+    try {
+      res = await callGemini(model, args, true);
+      if (res.status === 400) res = await callGemini(model, args, false); // an option this model does not accept: retry plain
+    } catch (e) {
+      console.error('Gemini network error', model, String(e).slice(0, 200));
+      lastStatus = 0;
+      continue;
+    }
+    if (!res.ok) {
+      lastStatus = res.status;
+      console.error('Gemini error', model, res.status, (await res.text().catch(() => '')).slice(0, 300));
+      continue; // retired (404), busy (429) or failing (5xx): try the next model
+    }
+    const data = await res.json();
+    const text = (data.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('').trim();
+    if (!text) { console.error('Gemini empty answer', model, data.candidates?.[0]?.finishReason); continue; }
+    goodModel = model;
+    return text;
   }
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('Gemini error', res.status, body.slice(0, 300));
-    throw new HttpError(502, res.status === 429 ? 'The AI service is busy right now.' : `The AI service returned an error (${res.status}).`, 'ai_error');
-  }
-  const data = await res.json();
-  const text = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
-  if (!text) throw new HttpError(502, 'The AI returned an empty answer.', 'ai_error');
-  return text;
+  throw new HttpError(502, lastStatus === 429 ? 'The AI service is busy right now.' : 'The AI service is not available right now.', 'ai_error');
 }
 
 function parseJson(raw) {
@@ -113,13 +130,24 @@ async function _tailorResume({ content, job, country }, opts) {
 }
 
 async function _writeCoverLetter({ content, job, tone, country }, opts) {
-  if (!useAi(opts)) return { letter: offline.coverLetter(content, job, tone), mode: 'basic' };
+  if (!useAi(opts)) return { letter: offline.coverLetter(content, job, tone, country), mode: 'basic' };
+  const formal = !['US', 'CA'].includes(country);
   const raw = await generate({
-    system: `You write cover letters that sound like a real person: specific, warm, 200-300 words, no filler. Open with a concrete hook tied to the role or company, connect 2-3 REAL points from the candidate's data to the job's needs, close with a clear call to action. Tone: ${tone || 'professional'}. Follow ${COUNTRIES[country]?.name || 'US'} business-letter conventions. Understand the candidate's situation first: if they have no work experience, write from their education, projects, certificates and skills and be honest about being at the start of their career; never imply jobs they have not had. If the job description is vague, do not guess company details. ${RULES} Start with "Dear Hiring Manager," unless a name is given, and end with a sign-off and the candidate's name. Return ONLY the letter text.`,
-    user: [fence('situation', situation(content)), fence('candidate', resumeToText(content).slice(0, 6000)), fence('target_job', `${job.title || ''} ${job.company ? 'at ' + job.company : ''}\n${job.description.slice(0, 5000)}`)].join('\n'),
-    maxTokens: 1200, temperature: 0.9,
+    system: `You are a careful professional writing a real job application letter for the candidate, in first person, as the candidate. It must read like a thoughtful person wrote it for this one job, not like a template.
+
+Structure (3 to 5 short paragraphs, 200-300 words in total):
+1. Say plainly which position they are applying for and who they are right now (for example "a civil engineering graduate of Kabale University and a Student Member of UIPE"), using the candidate's real situation.
+2. Their strongest REAL evidence: name actual employers, internships, projects, tools, qualifications or numbers from the candidate data, and say what those experiences prepared them to do. Choose the 2-3 points that matter most for THIS job description; ignore the rest.
+3. Fit: connect specific requirements in the job description to things the candidate really has (skills, tools, certificates). If the job asks for something they lack, do not claim it; show readiness to learn it instead.
+4. Close: mention the CV is attached, invite a conversation, thank the reader. If the extra notes contain facts or wishes (for example willingness to relocate), use them naturally.
+
+Style: plain, warm, specific, confident without boasting. Tone requested: ${tone || 'professional'}. Vary sentence length. No filler such as "I am writing to express my interest", no list of adjectives about themselves, no cliches. Do not repeat the CV line by line.
+Format: output ONLY the letter body. Do not include the sender's address, date, recipient address or a subject/RE line; the page adds those. Start with "${formal ? 'Dear Sir/Madam,' : 'Dear Hiring Manager,'}" (use a name only if the job text gives one). End with "${formal ? 'Yours faithfully,' : 'Sincerely,'}" on its own line, then the candidate's full name on the next line. Use ${country === 'US' || country === 'CA' ? 'American' : 'British'} spelling. Paragraphs separated by a blank line.
+Understand the situation first: if the candidate has no work experience, write from education, internships, projects, certificates and skills and be honest about being at the start of their career; never imply jobs or results they do not have. ${RULES}`,
+    user: [fence('situation', situation(content)), fence('candidate', resumeToText(content).slice(0, 7000)), fence('target_job', `${job.title || ''} ${job.company ? 'at ' + job.company : ''}\n${job.description.slice(0, 5000)}`), job.notes ? fence('extra_notes_from_candidate', job.notes) : ''].filter(Boolean).join('\n'),
+    maxTokens: 1400, temperature: 1,
   });
-  return { letter: raw, mode: 'ai' };
+  return { letter: raw.replace(/^```\w*\n?|```$/g, '').trim(), mode: 'ai' };
 }
 
 async function _interviewPrep({ content, job }, opts) {

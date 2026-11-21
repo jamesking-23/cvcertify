@@ -142,3 +142,30 @@ test('when Gemini fails or is rate limited, the built-in writer answers instead 
     assert.equal((await ai.writeSummary({ content, job: null })).mode, 'ai');
   } finally { globalThis.fetch = realFetch; delete process.env.GEMINI_API_KEY; }
 });
+
+test('a retired Gemini model (404) is skipped and the next model is used', async () => {
+  const ai = await import('../supabase/functions/cvc-api/ai.mjs');
+  const realFetch = globalThis.fetch;
+  process.env.GEMINI_API_KEY = 'test-key-not-real';
+  const seen = [];
+  try {
+    globalThis.fetch = async (url) => {
+      seen.push(String(url).match(/models\/([^:]+):/)[1]);
+      return seen.length === 1 ? new Response('gone', { status: 404 }) : Response.json({ candidates: [{ content: { parts: [{ thought: true, text: 'thinking...' }, { text: 'Dear Sir/Madam,\n\nHello.\n\nYours faithfully,\nA B' }] } }] });
+    };
+    const quiet = console.error; console.error = () => {};
+    const r = await ai.writeCoverLetter({ content: { ...emptyContent(), personal: { fullName: 'A B' } }, job: { title: 'Clerk', company: 'X', description: 'x'.repeat(60) }, tone: 'professional', country: 'AF' });
+    console.error = quiet;
+    assert.equal(r.mode, 'ai');
+    assert.equal(seen.length, 2);
+    assert.ok(!r.letter.includes('thinking'));
+    assert.match(r.letter, /^Dear Sir\/Madam,/);
+  } finally { globalThis.fetch = realFetch; delete process.env.GEMINI_API_KEY; }
+});
+
+test('resumes hide date of birth and nationality unless the person opts in', async () => {
+  const { cleanContent } = await import('../supabase/functions/cvc-api/clean.mjs');
+  const c = cleanContent({ personal: { fullName: 'A', dob: '2000-01-01', nationality: 'Ugandan' } });
+  assert.equal(c.options.showPersonal, false);
+  assert.equal(cleanContent({ options: { showPersonal: true } }).options.showPersonal, true);
+});
