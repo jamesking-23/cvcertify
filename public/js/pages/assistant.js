@@ -12,17 +12,32 @@ export default function assistantPage() {
 
   const add = (role, text) => { const b = h('div', { class: `bubble ${role === 'user' ? 'me' : 'bot'}` }, text); log.append(b); log.scrollTop = log.scrollHeight; return b; };
 
+  // Shows the reply as it "arrives" so the wait feels alive; capped at about a second and skipped for reduced motion.
+  const reveal = async (el, full) => {
+    el.textContent = '';
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = full; return; }
+    const parts = full.match(/\S+\s*/g) || [full];
+    const step = Math.max(1, Math.ceil(parts.length / 55));
+    for (let i = 0; i < parts.length; i += step) {
+      el.textContent += parts.slice(i, i + step).join('');
+      log.scrollTop = log.scrollHeight;
+      await new Promise((r) => setTimeout(r, 18));
+    }
+    el.textContent = full;
+  };
+
   const ask = async (text) => {
     text = text.trim();
     if (!text) return;
     input.value = '';
     clear(starters);
     add('user', text);
-    const pending = add('bot', 'Thinking…');
+    const pending = add('bot', '');
+    pending.append(h('span', { class: 'typing', role: 'status', 'aria-label': 'Writing a reply' }, h('i'), h('i'), h('i')));
     send.disabled = true;
     try {
       const out = await post('/ai/assistant', { message: text, history: history.slice(-8) });
-      pending.textContent = out.reply;
+      await reveal(pending, out.reply);
       history.push({ role: 'user', text }, { role: 'assistant', text: out.reply });
     } catch (e) {
       pending.remove();

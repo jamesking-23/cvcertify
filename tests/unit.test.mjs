@@ -169,3 +169,23 @@ test('resumes hide date of birth and nationality unless the person opts in', asy
   assert.equal(c.options.showPersonal, false);
   assert.equal(cleanContent({ options: { showPersonal: true } }).options.showPersonal, true);
 });
+
+test('a hung Gemini model is overtaken by the next one instead of making the user wait', async () => {
+  process.env.AI_HEDGE_MS = '40';
+  const ai = await import('../supabase/functions/cvc-api/ai.mjs?hedge');
+  const realFetch = globalThis.fetch;
+  process.env.GEMINI_API_KEY = 'test-key-not-real';
+  let calls = 0;
+  try {
+    globalThis.fetch = (url, o) => {
+      calls++;
+      if (calls === 1) return new Promise((_, rej) => o.signal.addEventListener('abort', () => rej(new Error('aborted')))); // hangs until cancelled
+      return Promise.resolve(Response.json({ candidates: [{ content: { parts: [{ text: 'Short reply.' }] } }] }));
+    };
+    const t = Date.now();
+    const r = await ai.assistant({ message: 'hi', history: [], content: { ...emptyContent() }, context: '' });
+    assert.equal(r.mode, 'ai');
+    assert.ok(Date.now() - t < 2000, 'answered long before the 28s timeout');
+    assert.equal(calls, 2);
+  } finally { globalThis.fetch = realFetch; delete process.env.GEMINI_API_KEY; delete process.env.AI_HEDGE_MS; }
+});

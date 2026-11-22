@@ -40,6 +40,7 @@ await ctx.route('https://dgvaoswcbzzcyaentjwr.supabase.co/**', async (route) => 
     return json(route, 200, db.resumes.map((r) => ({ ...r, name: r.content.personal.fullName })));
   }
   if (p === '/rest/v1/rpc/cvc_verify') return json(route, 200, body.p_id.includes('GOOD') ? { id: 'CVC-GOOD-0000-0000', status: 'valid', holder: 'Jane Doe', headline: '', kind: 'resume', issuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), revisions: 1, snapshot: { fullName: 'Jane Doe', experience: [], education: [], certifications: [], skills: [] }, note: 'n' } : null);
+  if (p === '/rest/v1/rpc/cvc_public_portfolio') return json(route, 200, body.p_slug === 'jane' ? { name: 'Jane Doe', headline: 'Monitoring and evaluation specialist', about: 'I design the systems that show whether a programme is working, and I write the reports that donors actually read.', location: 'Kabul, Afghanistan', availability: 'Open to roles from January', theme: 'light', contact: { email: 'jane@example.com', phone: '+93 700 000 000' }, links: [{ label: 'LinkedIn', url: 'https://linkedin.com/in/jane' }], skills: ['Data analysis', 'Report writing', 'KoBoToolbox', 'Stata'], experience: [{ role: 'M&E Officer', company: 'Relief Org', location: 'Kabul', start: '2022-03', end: '', current: true, bullets: ['Cut reporting time by 40% with a shared dashboard.', 'Trained 25 field staff on mobile data collection.'] }], projects: [{ name: 'Water access survey', tech: 'KoBoToolbox, Stata', description: 'Surveyed 1,200 households across six districts.', link: '' }], education: [{ school: 'Kabul University', degree: 'BSc', field: 'Economics', start: '2017-09', end: '2021-06' }], certifications: [{ name: 'PMD Pro', issuer: 'PM4NGOs', year: '2023' }], languages: [{ name: 'English', level: 'Fluent' }, { name: 'Dari', level: 'Native' }], docId: 'CVC-GOOD-0000-0000', issuedAt: '2026-11-18T10:00:00Z' } : null);
   if (p === '/rest/v1/rpc/cvc_track') return json(route, 204, {});
   if (p === '/rest/v1/cvc_payments') return json(route, 200, []);
   if (p === '/rest/v1/rpc/cvc_redeem') {
@@ -117,6 +118,12 @@ try {
   assert.equal(await page.getByRole('tab', { name: /Payments|Redeem/ }).count(), 0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/05-admin.png` });
   db.admin = false;
+
+  await page.goto(base + '/#/p/jane');
+  await page.getByRole('heading', { name: 'Jane Doe' }).waitFor();
+  await page.getByText('Verified document').waitFor();
+  if (SHOTS) { await page.waitForTimeout(3000); await page.screenshot({ path: `${SHOTS}/06-portfolio.png`, fullPage: true }); await page.setViewportSize({ width: 390, height: 800 }); await page.screenshot({ path: `${SHOTS}/07-portfolio-mobile.png`, fullPage: true }); await page.setViewportSize({ width: 1280, height: 860 }); }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
   await page.goto(base + '/#/terms');
   await page.getByRole('heading', { name: 'Terms of Service' }).waitFor();
