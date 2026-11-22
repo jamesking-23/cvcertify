@@ -189,3 +189,10 @@ test('a hung Gemini model is overtaken by the next one instead of making the use
     assert.equal(calls, 2);
   } finally { globalThis.fetch = realFetch; delete process.env.GEMINI_API_KEY; delete process.env.AI_HEDGE_MS; }
 });
+
+test('ATS keywords drop filler words and fragments of matched phrases', async () => {
+  const { extractKeywords } = await import('../supabase/functions/cvc-api/ats.mjs');
+  const k = extractKeywords('We need a Data Analyst skilled in SQL, Excel and Power BI for data analysis. Experience building dashboards is essential.');
+  for (const bad of ['essential', 'skilled', 'building', 'data']) assert.ok(!k.includes(bad), bad);
+  for (const good of ['data analysis', 'power bi', 'sql', 'excel', 'dashboards']) assert.ok(k.includes(good), good);
+});

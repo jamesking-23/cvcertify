@@ -4,7 +4,7 @@ import { resumeToText } from './constants.js';
 
 const STOP = new Set(
   `a about above after again all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its just me more most my no nor not now of off on once only or other our out over own same she should so some such than that the their theirs them then there these they this those through to too under until up us very was we were what when where which while who whom why will with would you your yours
-  able across etc including within without work working works role team teams candidate candidates position job responsibilities requirements required preferred ideal strong good great excellent plus years year experience experienced looking join company ability skills skill knowledge using use used understanding must need needs per via new best well make making help helping`
+  able across etc including within without work working works role team teams candidate candidates position job responsibilities requirements required preferred ideal strong good great excellent plus years year experience experienced looking join company ability skills skill knowledge using use used understanding must need needs per via new best well make making help helping essential skilled seeking proven successful various related relevant based ensure ensuring provide providing support supporting building build opportunity opportunities environment fast-paced dynamic join joining responsible demonstrated demonstrate demonstrates ideal looking hands-on day daily like love passion passionate`
     .split(/\s+/),
 );
 
@@ -64,8 +64,10 @@ export function extractKeywords(jd, max = 25) {
     const t = SYNONYMS[m[1].toLowerCase()] || m[1].toLowerCase();
     if (counts.has(t)) bump(t, 0.5);
   }
+  // A single word that is already part of a matched phrase ("data" inside "data analysis") is noise on its own.
+  const phraseWords = new Set([...counts.keys()].filter((k) => k.includes(' ')).flatMap((k) => k.split(' ')));
   return [...counts.entries()]
-    .filter(([k, v]) => v >= 1 && !STOP.has(k))
+    .filter(([k, v]) => v >= 1 && !STOP.has(k) && (k.includes(' ') || !phraseWords.has(k)))
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, max)
     .map(([k]) => k);
