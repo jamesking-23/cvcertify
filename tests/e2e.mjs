@@ -88,6 +88,10 @@ try {
   await page.getByRole('heading', { name: /master profile/i }).waitFor();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/02-profile.png` });
 
+  await page.goto(base + '/#/app');
+  await page.getByRole('heading', { name: /Good (morning|afternoon|evening), Jane/ }).waitFor();
+  if (SHOTS) { await page.waitForTimeout(1000); await page.screenshot({ path: `${SHOTS}/07-dashboard.png` }); }
+
   await page.goto(base + '/#/app/resumes');
   await page.getByRole('heading', { name: 'Resumes' }).first().waitFor();
 
