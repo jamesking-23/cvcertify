@@ -16,6 +16,25 @@ const emptyProfile = (name, email) => ({ personal: { fullName: name, headline: '
 const PAID = { resumes: null, rewrites: 200, letters: true, ats: true, interview: true, roadmap: true, portfolio: true };
 const me = () => ({ id: 'u1', name: db.user.name, email: db.user.email, country: 'US', createdAt: new Date().toISOString(), isAdmin: db.admin, plan: { id: 'starter', name: 'Free', limits: PAID, usage: { month: '2026-11', rewrites: 0 } }});
 
+
+// Cheap accessibility guard: every control has a name, every input a label, one h1, a lang attribute.
+async function a11y(page, where) {
+  const problems = await page.evaluate(() => {
+    const out = [];
+    const name = (el) => (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.textContent || el.getAttribute('title') || '').trim();
+    document.querySelectorAll('button, a[href]').forEach((el) => { if (!name(el) && !el.querySelector('img[alt]')) out.push('unnamed ' + el.tagName + ' ' + el.className); });
+    document.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea').forEach((el) => {
+      const labelled = el.id && document.querySelector(`label[for="${el.id}"]`) || el.closest('label') || el.getAttribute('aria-label') || el.getAttribute('aria-labelledby');
+      if (!labelled) out.push('unlabelled ' + el.tagName + ' ' + (el.placeholder || el.name || ''));
+    });
+    document.querySelectorAll('img').forEach((el) => { if (!el.hasAttribute('alt')) out.push('img without alt ' + el.src.slice(0, 40)); });
+    if (document.querySelectorAll('h1').length !== 1) out.push('h1 count ' + document.querySelectorAll('h1').length);
+    if (!document.documentElement.lang) out.push('no lang');
+    return out;
+  });
+  if (problems.length) throw new Error(`Accessibility problems on ${where}:\n- ${problems.join('\n- ')}`);
+}
+
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
 const page = await ctx.newPage();
@@ -86,11 +105,13 @@ try {
   await page.getByRole('button', { name: 'Create account' }).click();
   await page.waitForURL(/#\/app\/profile/);
   await page.getByRole('heading', { name: /master profile/i }).waitFor();
+  await a11y(page, 'profile');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/02-profile.png` });
 
   await page.goto(base + '/#/app');
   await page.getByRole('heading', { name: /Good (morning|afternoon|evening), Jane/ }).waitFor();
   if (SHOTS) { await page.waitForTimeout(1000); await page.screenshot({ path: `${SHOTS}/07-dashboard.png` }); }
+  await a11y(page, 'dashboard');
 
   await page.goto(base + '/#/app/resumes');
   await page.getByRole('heading', { name: 'Resumes' }).first().waitFor();
@@ -126,6 +147,7 @@ try {
   await page.goto(base + '/#/p/jane');
   await page.getByRole('heading', { name: 'Jane Doe' }).waitFor();
   await page.getByText('Verified document').waitFor();
+  await a11y(page, 'portfolio');
   if (SHOTS) { await page.waitForTimeout(3000); await page.screenshot({ path: `${SHOTS}/06-portfolio.png`, fullPage: true }); await page.setViewportSize({ width: 390, height: 800 }); await page.screenshot({ path: `${SHOTS}/07-portfolio-mobile.png`, fullPage: true }); await page.setViewportSize({ width: 1280, height: 860 }); }
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 

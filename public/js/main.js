@@ -1,4 +1,4 @@
-import { h, icon, clear, toast, setTitle } from './ui.js';
+import { h, icon, clear, toast, setTitle, watchLabels } from './ui.js';
 import { get, post, ApiError } from './api.js';
 import { auth, rpc } from './supabase-lite.js';
 import { PLANS } from './shared/constants.js';
@@ -202,6 +202,7 @@ async function render() {
 export const planName = (id) => PLANS[id]?.name || id;
 
 /* ---------- boot ---------- */
+watchLabels();
 (async () => {
   // Email-confirmation, password-reset and Google sign-in links return here with tokens in the URL.
   const back = auth.takeRedirect();

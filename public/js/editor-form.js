@@ -92,7 +92,7 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
       h('span', null, 'Show date of birth and nationality on this resume ', h('span', { class: 'hint' }, rules.dob || rules.nationality ? `(common in ${rules.name}, but optional)` : `(not usual in ${rules.name})`))));
 
   const summary = () => {
-    const ta = bound(c, 'summary', change, { rows: 4, placeholder: '2–4 sentences: who you are, what you do best, what you want next.' }, 'textarea');
+    const ta = bound(c, 'summary', change, { rows: 4, 'aria-label': 'Professional summary', placeholder: '2–4 sentences: who you are, what you do best, what you want next.' }, 'textarea');
     const btn = h('button', { type: 'button', class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: async () => {
       setBusy(btn, true, ['Reading your profile…', 'Writing options…', 'Polishing…']);
       try { showOptions(await ai.summary()); } catch (e) { handleAiError(e); }

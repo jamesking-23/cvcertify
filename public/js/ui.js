@@ -171,3 +171,20 @@ export function setBusy(btn, busy, label) {
 export function setTitle(t) {
   document.title = t ? `${t} · CV-Certify` : 'CV-Certify: A job for everyone';
 }
+
+// Connects every visible <label> to the control beside it, so screen readers announce field names.
+// Runs on all DOM changes, so screens built later are covered without each one wiring ids by hand.
+let labelSeq = 0;
+export function linkLabels(root = document) {
+  root.querySelectorAll('.field > label:not([for])').forEach((label) => {
+    const control = label.parentElement.querySelector('input:not([type=hidden]), select, textarea');
+    if (!control || control.getAttribute('aria-label')) return;
+    if (!control.id) control.id = `f${++labelSeq}`;
+    label.htmlFor = control.id;
+  });
+}
+export function watchLabels() {
+  let queued = false;
+  new MutationObserver(() => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; linkLabels(); }); }).observe(document.body, { childList: true, subtree: true });
+  linkLabels();
+}
