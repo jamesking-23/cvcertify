@@ -1,0 +1,11 @@
+{
+  "name": "CV-Certify",
+  "short_name": "CV-Certify",
+  "description": "Resumes, cover letters and a portfolio, each sealed with its own verifiable ID.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f9f5",
+  "theme_color": "#178055",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

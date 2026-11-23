@@ -26,6 +26,9 @@ jobs:
       - name: Stamp build version
         run: sed -i "s/name=\"cvc-build\" content=\"dev\"/name=\"cvc-build\" content=\"${GITHUB_SHA::7}\"/" public/index.html
       - uses: actions/configure-pages@v5
+        id: pages
+      - name: Insert the site address into share tags
+        run: sed -i "s|__SITE_URL__|${{ steps.pages.outputs.base_url }}|g" public/index.html public/robots.txt public/sitemap.xml
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
