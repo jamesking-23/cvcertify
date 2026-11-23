@@ -62,7 +62,7 @@ export default async function lettersPage() {
       if (!resumes.length) return toast('Create a resume first. The letter is written from it.', 'error');
       if (jd.value.trim().length < 40) { toast('Paste the job description first.', 'error'); return jd.focus(); }
       if (body.value.trim() && !(await confirmDialog('Replace the current letter?', 'Generating a new draft overwrites the text in the editor.', 'Replace'))) return;
-      setBusy(gen, true, 'Writing…');
+      setBusy(gen, true, ['Reading your CV…', 'Matching it to the job…', 'Drafting your letter…', 'Polishing the wording…']);
       try {
         const { resume } = await get('/resumes/' + (rs.value || l.resumeId));
         const out = await post('/ai/letter', { content: resume.content, job: l.job, tone: tone.value, country: resume.country });

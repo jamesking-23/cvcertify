@@ -146,15 +146,25 @@ export async function copyText(text) {
   }
 }
 
+// `label` may be a list of steps ("Reading your CV…", "Drafting…"): they advance every few seconds so a long AI call feels like progress.
+const busyTimers = new WeakMap();
 export function setBusy(btn, busy, label) {
   if (!btn) return;
+  clearInterval(busyTimers.get(btn));
   if (busy) {
-    btn.dataset.label = btn.textContent;
+    const steps = Array.isArray(label) ? label : [label || 'Working…'];
+    btn.dataset.label = btn.dataset.label || btn.textContent;
     btn.disabled = true;
-    clear(btn).append(h('span', { class: 'spinner' }), label || 'Working…');
+    btn.setAttribute('aria-busy', 'true');
+    const text = h('span', null, steps[0]);
+    clear(btn).append(h('span', { class: 'spinner' }), text);
+    let i = 0;
+    if (steps.length > 1) busyTimers.set(btn, setInterval(() => { i = Math.min(i + 1, steps.length - 1); text.textContent = steps[i]; }, 3200));
   } else {
     btn.disabled = false;
+    btn.removeAttribute('aria-busy');
     btn.textContent = btn.dataset.label || '';
+    delete btn.dataset.label;
   }
 }
 

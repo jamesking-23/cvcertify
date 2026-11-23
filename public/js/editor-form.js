@@ -94,7 +94,7 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
   const summary = () => {
     const ta = bound(c, 'summary', change, { rows: 4, placeholder: '2–4 sentences: who you are, what you do best, what you want next.' }, 'textarea');
     const btn = h('button', { type: 'button', class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: async () => {
-      setBusy(btn, true, 'Writing…');
+      setBusy(btn, true, ['Reading your profile…', 'Writing options…', 'Polishing…']);
       try { showOptions(await ai.summary()); } catch (e) { handleAiError(e); }
       setBusy(btn, false);
       btn.prepend(icon('sparkles', 'icon-sm'));
@@ -125,7 +125,7 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
       ta.addEventListener('input', () => { e.bullets = ta.value.split('\n').map((l) => l.trim()).filter(Boolean); change(); });
       const btn = h('button', { type: 'button', class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: async () => {
         if (!e.bullets.length) return toast('Write a rough bullet first, then let AI polish it.', 'error');
-        setBusy(btn, true, 'Improving…');
+        setBusy(btn, true, ['Reading your bullets…', 'Rewriting…', 'Polishing…']);
         try {
           const out = await ai.bullets(e);
           variants = out.variants || out.bullets.map((b) => [b]);
