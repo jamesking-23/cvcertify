@@ -96,6 +96,9 @@ try {
   await page.locator('.desk .paper.t-academic').waitFor();
   await page.locator('.footer-mark').waitFor({ state: 'attached' });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/01-landing.png` });
+  // Text inside sample resumes must never be resized by landing-page styles.
+  const oversize = await page.evaluate(() => [...document.querySelectorAll('.paper b, .paper strong')].filter((el) => parseFloat(getComputedStyle(el).fontSize) > parseFloat(getComputedStyle(el.closest('.paper')).fontSize) * 1.3).length);
+  assert.equal(oversize, 0, 'bold text inside a sample resume is oversized');
 
   await page.getByRole('link', { name: 'Get started' }).first().click();
   await page.waitForURL(/#\/signup/);
