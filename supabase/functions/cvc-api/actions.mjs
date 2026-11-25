@@ -150,6 +150,52 @@ export function answer_interview_question(message, ctx) {
   return { reply: 'Tell me which question you want help with, for example:\n- help me answer tell me about yourself\n- how do I answer why should we hire you\n- how do I answer what are your weaknesses' };
 }
 
+/* ---------- calculator: a small parser, never eval() ---------- */
+const WORD_OPS = [[/\bmultiplied by\b|\btimes\b/g, '*'], [/\bdivided by\b|\bover\b/g, '/'], [/\bplus\b|\badd\b/g, '+'], [/\bminus\b|\bless\b|\bsubtract\b/g, '-'], [/(?<=\d)\s*x\s*(?=\d)/g, '*'], [/\u00d7/g, '*'], [/\u00f7/g, '/']];
+const CALC_CUE = /\b(calculate|compute|work out|solve|how much is|what is|what's|whats|sum of)\b/i;
+function cleanMath(message) {
+  let s = String(message || '').toLowerCase().replace(/(?<=\d),(?=\d{3})/g, '').replace(/\b(ugx|ush|shs|usd|kes|tzs)\b|\$/g, '').replace(/\bpercent\b/g, '%');
+  for (const [re, to] of WORD_OPS) s = s.replace(re, ` ${to} `);
+  return s;
+}
+function evalExpr(src) {
+  const t = src.match(/\d+(?:\.\d+)?|[-+*/^()%]/g) || [];
+  let i = 0;
+  const peek = () => t[i], next = () => t[i++];
+  const num = () => {
+    const x = next();
+    if (x === '(') { const v = add(); if (next() !== ')') throw new Error('paren'); return v; }
+    if (x === '-') return -num();
+    if (x === '+') return num();
+    if (x === undefined || !/^\d/.test(x)) throw new Error('number');
+    return Number(x);
+  };
+  const pow = () => { let v = num(); while (peek() === '^') { next(); v = v ** num(); } return v; };
+  const pct = () => { let v = pow(); while (peek() === '%') { next(); v /= 100; } return v; };
+  const mul = () => { let v = pct(); while (peek() === '*' || peek() === '/') { const o = next(); const r = pct(); v = o === '*' ? v * r : v / r; } return v; };
+  const add = () => { let v = mul(); while (peek() === '+' || peek() === '-') { const o = next(); const r = mul(); v = o === '+' ? v + r : v - r; } return v; };
+  const v = add();
+  if (i < t.length) throw new Error('trailing');
+  return v;
+}
+/** Pulls a calculation out of a message. Returns { expr, value } or null. */
+export function extractMath(message) {
+  const s = cleanMath(message);
+  const p = /(-?\d+(?:\.\d+)?)\s*%\s*of\s*(-?\d+(?:\.\d+)?)/.exec(s);
+  if (p) return { expr: `${p[1]}% of ${p[2]}`, value: (Number(p[1]) / 100) * Number(p[2]) };
+  const m = s.match(/[\d.()][\d.\s+\-*/^()%]*[\d.)%]/g);
+  if (!m) return null;
+  const expr = m.sort((a, b) => b.length - a.length)[0].trim();
+  if (!/\d\s*[-+*/^]\s*[-(]?\d|\d\s*%/.test(expr)) return null;
+  try { const value = evalExpr(expr); return Number.isFinite(value) ? { expr: expr.replace(/\s+/g, ' '), value } : null; } catch { return null; }
+}
+const fmtNum = (n) => (Number.isInteger(n) ? n.toLocaleString('en-US') : Number(n.toFixed(4)).toLocaleString('en-US', { maximumFractionDigits: 4 }));
+export function calculate(message) {
+  const r = extractMath(message);
+  if (!r) return { reply: 'Give me the numbers and I will work it out. For example:\n- what is 15% of 2,400,000\n- calculate 850000 + 120000 * 3' };
+  return { reply: `${r.expr} = ${fmtNum(r.value)}` };
+}
+
 export function skill_roadmap(message, ctx) {
   const f = profileFacts(ctx.content);
   if (needProfile(f)) return { reply: EMPTY };
@@ -220,6 +266,7 @@ export const ACTIONS = {
   ats_score: { run: ats_score, title: 'Score your CV against a job advert', example: 'ats score: <paste the job description>' },
   interview_questions: { run: interview_questions, title: 'Interview questions with tips', example: 'interview questions for a teller job' },
   answer_interview_question: { run: answer_interview_question, title: 'Help answering an interview question', example: 'help me answer tell me about yourself' },
+  calculate: { run: calculate, title: 'Do a quick calculation', example: 'what is 15% of 2,400,000' },
   skill_roadmap: { run: skill_roadmap, title: 'Skills to learn for a job', example: 'skill roadmap: <paste the job description>' },
   profile_completeness: { run: profile_completeness, title: 'Check how complete your profile is', example: 'how complete is my profile' },
   years_experience: { run: years_experience, title: 'Count your years of experience', example: 'how many years of experience do I have' },
@@ -236,18 +283,27 @@ export function fallback() {
   return `I did not quite get that. I am built for CV and job-search tasks, not open chat. Try something like:\n${ex.map((e) => `- ${e}`).join('\n')}\n\nType "help" to see everything I can do.`;
 }
 
+/** Exact cues that are matched before similarity scoring: a quoted interview question, or an obvious calculation. */
+export function matchOverride(text) {
+  if (/\b(answer|answering|respond|reply|say)\b/i.test(text) && QUESTIONS.some((q) => q.re.test(text))) return 'answer_interview_question';
+  if (/^[\d\s.,+\-*/x\u00d7\u00f7^()%]+$/i.test(text) && extractMath(text)) return 'calculate';
+  if ((CALC_CUE.test(text) || /\d\s*%\s*of\s*\d|\bpercent of\b/i.test(text)) && extractMath(text)) return 'calculate';
+  return null;
+}
+/** Runs one action by name. Never throws on user input. */
+export function runIntent(intent, text, ctx = {}) {
+  return ACTIONS[intent].run(text, { content: ctx.content || {}, ...ctx }).reply;
+}
+
 /** Route one message to one action. Never throws on user input. */
 export function handleMessage(message, ctx = {}, { minConfidence = threshold() } = {}) {
   const started = performance.now();
   const text = String(message || '').trim();
   const done = (o) => ({ ...o, ms: Math.round((performance.now() - started) * 100) / 100 });
   if (!text) return done({ reply: fallback(), intent: null, confidence: 0, matched: false });
-  // A well-known interview question quoted in the message ("help me answer 'tell me about yourself'") is an exact cue,
-  // and its wording overlaps with ordinary chat, so it is matched directly before similarity scoring.
-  if (/\b(answer|answering|respond|reply|say)\b/i.test(text) && QUESTIONS.some((q) => q.re.test(text))) {
-    const out = answer_interview_question(text, { content: ctx.content || {}, ...ctx });
-    return done({ reply: out.reply, intent: 'answer_interview_question', confidence: 1, matched: true });
-  }
+  // Exact cues (a quoted interview question, an obvious calculation) overlap with ordinary chat, so they are matched first.
+  const cue = matchOverride(text);
+  if (cue) return done({ reply: runIntent(cue, text, ctx), intent: cue, confidence: 1, matched: true });
   const top = classify(text)[0];
   if (!top || top.confidence < minConfidence) return done({ reply: fallback(), intent: null, confidence: top ? top.confidence : 0, matched: false });
   const out = ACTIONS[top.intent].run(text, { content: ctx.content || {}, ...ctx });

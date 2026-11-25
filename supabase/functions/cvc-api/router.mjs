@@ -45,6 +45,10 @@ export const INTENTS = {
     'what do i say when they ask about me', 'how to answer why should we hire you', 'how do i answer what are your weaknesses',
     'what are my strengths for the interview',
   ],
+  calculate: [
+    'calculate this for me', 'what is 15 percent of 2000000', 'work out this sum', 'how much is 250000 plus 40000',
+    'help me do some maths', 'what is 12 times 45', 'solve this calculation', 'add these numbers up',
+  ],
   skill_roadmap: [
     'what skills should i learn', 'make me a learning plan', 'skill roadmap for the job', 'what skills am i missing for this role',
     'how do i close my skill gaps', 'i want to learn what to get this job', 'plan to improve my skills',

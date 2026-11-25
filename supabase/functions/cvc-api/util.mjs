@@ -14,4 +14,4 @@ export const newId = (prefix = '') => {
   return prefix + btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 
-export const env = (k) => (typeof Deno !== 'undefined' ? Deno.env.get(k) : process.env[k]);
+export const env = (k) => (typeof Deno !== 'undefined' ? Deno.env.get(k) : typeof process !== 'undefined' ? process.env[k] : undefined);

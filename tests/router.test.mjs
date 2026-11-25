@@ -45,7 +45,7 @@ test('requests in different registers reach the right action', () => {
 });
 
 test('gibberish and open-ended chat fall back politely and point to supported commands', () => {
-  for (const q of ['asdkjh qwe', 'tell me a joke', 'what is the capital of france', 'who won the world cup', '2+2', 'play some music', 'bitcoin price', '']) {
+  for (const q of ['asdkjh qwe', 'tell me a joke', 'what is the capital of france', 'who won the world cup', 'play some music', 'bitcoin price', '']) {
     const r = ask(q);
     assert.equal(r.matched, false, q);
     assert.equal(r.intent, null);
@@ -129,4 +129,23 @@ test('help with a named interview question gives a profile-based answer', () => 
   assert.equal(r.intent, 'answer_interview_question');
   assert.match(r.reply, /present, past, future/i);
   assert.equal(ask('how do i answer why should we hire you', content).intent, 'answer_interview_question');
+});
+
+test('calculations are parsed and solved without eval', () => {
+  assert.match(ask('what is 15% of 2,400,000').reply, /= 360,000/);
+  assert.match(ask('2+2').reply, /= 4$/);
+  assert.match(ask('calculate 850000 + 120000 * 3').reply, /= 1,210,000/);
+  assert.equal(A.extractMath('process.exit(1)'), null);
+  assert.equal(ask('what is the capital of france').matched, false);
+});
+
+test('Tier 1 router works with any embedder and returns the query vector for Tier 2', async () => {
+  const { createRouter, hashedEmbedder } = await import('../supabase/functions/cvc-api/tier1.mjs');
+  const r = createRouter(hashedEmbedder);
+  await r.ready;
+  const hit = await r.handle('hello', { content });
+  assert.equal(hit.intent, 'greet_user');
+  const miss = await r.handle('explain how photosynthesis works', { content });
+  assert.equal(miss.matched, false);
+  assert.ok(miss.embedding?.length > 0, 'a miss keeps its embedding so the cache can reuse it');
 });
