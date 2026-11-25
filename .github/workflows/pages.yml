@@ -30,6 +30,8 @@ jobs:
       # now and serve them from this site, so the browser never contacts Hugging Face or a CDN.
       - name: Install runtime
         run: npm install --omit=dev --no-audit --no-fund
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
       - name: Download model and precompute intent vectors
         run: npm run model
       - name: Stamp build version
