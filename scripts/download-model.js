@@ -27,7 +27,7 @@ async function download(file) {
 
 function copyRuntime() {
   let pkgDir;
-  try { pkgDir = path.dirname(require.resolve('@huggingface/transformers/package.json')); } catch { throw new Error('Run "npm install" first: @huggingface/transformers is missing.'); }
+  try { pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', '@huggingface', 'transformers'); if (!fs.existsSync(path.join(pkgDir, 'package.json'))) throw new Error('missing'); } catch { throw new Error('Run "npm install" first: @huggingface/transformers is missing.'); }
   const dist = path.join(pkgDir, 'dist');
   const out = path.join(PUBLIC, 'vendor', 'transformers');
   fs.mkdirSync(out, { recursive: true });
