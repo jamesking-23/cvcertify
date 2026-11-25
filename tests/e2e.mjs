@@ -19,6 +19,8 @@ const me = () => ({ id: 'u1', name: db.user.name, email: db.user.email, country:
 
 // Cheap accessibility guard: every control has a name, every input a label, one h1, a lang attribute.
 async function a11y(page, where) {
+  // Labels are linked on the next animation frame after a render; let that settle so the check is not racing it.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50)))));
   const problems = await page.evaluate(() => {
     const out = [];
     const name = (el) => (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.textContent || el.getAttribute('title') || '').trim();
