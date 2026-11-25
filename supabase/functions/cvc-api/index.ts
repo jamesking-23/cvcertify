@@ -1,7 +1,10 @@
 // CV-Certify server-side tasks: AI writing, ATS scoring. Everything else is plain Postgres behind RLS.
-// Feature gating is enforced here via service-role-only SQL functions. All writing runs offline in this process.
+// Feature gating is enforced here via service-role-only SQL functions. Writing tools run offline in this process;
+// only open-ended assistant questions that miss the on-device router and the shared answer cache reach Gemini (ask.mjs).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as ai from "./ai.mjs";
+import { ask } from "./ask.mjs";
+import { aiEnabled } from "./gemini.mjs";
 import { scoreResume } from "./ats.mjs";
 import { cleanContent, cleanJob, text } from "./clean.mjs";
 import { HttpError } from "./util.mjs";
@@ -102,14 +105,17 @@ Deno.serve(async (req) => {
         const { missing } = scoreResume(content, job.description);
         return reply(200, { missing, ...(await ai.skillRoadmap({ content, job, missing })) });
       }
+      // Assistant tiers 2 and 3. Tier 1 (on-device commands) already ran in the browser and found nothing.
+      case "ask":
       case "assistant": {
         const message = text(b.message, 2000).trim();
         if (!message) throw new HttpError(400, "Type a question first.");
         const { data } = await asUser.from("cvc_profiles").select("content").maybeSingle();
-        return reply(200, await ai.assistant({ message, history: Array.isArray(b.history) ? b.history.slice(-8) : [], content: cleanContent(data?.content), context: b.context }));
+        const history = (Array.isArray(b.history) ? b.history.slice(-8) : []).map((m: { role?: string; text?: unknown }) => ({ role: m?.role === "user" ? "user" : "assistant", text: text(m?.text, 1500) }));
+        return reply(200, await ask({ admin, message, embedding: Array.isArray(b.embedding) ? b.embedding : null, content: cleanContent(data?.content), history }));
       }
       case "config":
-        return reply(200, { ai: ai.aiEnabled() });
+        return reply(200, { ai: aiEnabled() });
       default:
         throw new HttpError(400, "Unknown task.", "bad_task");
     }

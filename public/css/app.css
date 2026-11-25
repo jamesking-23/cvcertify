@@ -681,3 +681,5 @@ body.lp-body { --lp-paper: #f1ece0; --lp-paper-2: #e8e1d1; --lp-card: #fbf8f1; -
 
 /* Resume sheets are self-contained: nothing from the surrounding page may resize their text. */
 .paper b, .paper strong { font-family: inherit; font-size: inherit; letter-spacing: inherit; font-weight: 600; }
+
+.bubble-src { display: block; margin-top: 6px; font-size: 12px; color: var(--ink-500); }

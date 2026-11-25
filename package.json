@@ -11,8 +11,12 @@
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "sync": "node scripts/sync-function.mjs",
-    "test": "node --test tests/unit.test.mjs tests/router.test.mjs",
-    "test:e2e": "node tests/e2e.mjs"
+    "test": "node --test tests/unit.test.mjs tests/router.test.mjs tests/tiers.test.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "model": "node scripts/download-model.js && node scripts/build-intents.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.0"
   },
   "devDependencies": {
     "playwright": "^1.50.0"

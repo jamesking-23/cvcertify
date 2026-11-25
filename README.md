@@ -27,7 +27,7 @@ After editing `public/js/shared/constants.js` or the function's `clean.mjs` / `u
 
 ## Set up your own Supabase project
 1. Apply `supabase/migrations/*.sql`.
-2. Deploy `supabase/functions/cvc-api` (JWT verification on). It needs no AI key: all writing and the assistant run offline inside the function.
+2. Deploy `supabase/functions/cvc-api` (JWT verification on). Writing tools run offline. Only the assistant's Tier 3 needs the optional `GEMINI_API_KEY` secret (set it in the Supabase dashboard, never in code).
 3. Put your project URL and publishable key in `public/js/config.js`.
 4. In Supabase Auth settings, add the site URL (for example `https://<user>.github.io/cvcertify/`) to **Redirect URLs** so confirmation, reset and Google links return to the app.
 
@@ -40,7 +40,7 @@ There are no paid plans and no usage cap: everything is free. The old payment ta
 
 ## Going live
 
-**1. Secrets:** none are needed for writing or the assistant. There is no AI provider, no API key and no outbound AI call.
+**1. Secrets:** `GEMINI_API_KEY` (Supabase dashboard > Edge Functions > Secrets) switches on Tier 3 of the assistant. Without it the assistant still answers all built-in commands and says politely that the AI service is off for open questions.
 
 **2. Email confirmation:** to avoid depending on Supabase's limited email sending, turn off Authentication > Providers > Email > **Confirm email**. The app handles both settings.
 
@@ -52,11 +52,11 @@ insert into public.cvc_admins (user_id) select id from auth.users where email = 
 
 The **Admin** link then appears in the app sidebar (visitors, users, activity).
 
-## The offline assistant
-`supabase/functions/cvc-api/router.mjs` classifies a chat message; `actions.mjs` holds the deterministic functions it can run. The router never writes the answer.
+## The assistant: three tiers
+1. **Tier 1, on your device (offline).** `public/js/assistant/` loads the quantized `Xenova/bge-small-en-v1.5` model (~33 MB) with Transformers.js from local files only (`allowRemoteModels = false`). `npm run model` downloads the model and runtime into `public/models` and `public/vendor` and precomputes the intent vectors; the Pages workflow runs it on every build. A message is embedded and compared (cosine >= 0.72) with the `INTENTS` bank in `router.mjs`; the winning intent runs a typed function in `actions.mjs` (greetings, help, calculator, CV tools). Until the model has loaded, or if it fails, a built-in hashed n-gram embedder keeps Tier 1 working.
+2. **Tier 2, shared semantic cache.** On a Tier 1 miss the browser sends its bge embedding to the `ask` task. The function looks it up in `cvc_response_cache` (pgvector) and returns a stored answer when cosine >= 0.90, the extracted conditions (country) match, and the source facts are unchanged. Questions containing numbers or about the person's own data are never cached. Hits update `last_used_at`.
+3. **Tier 3, Gemini.** Only if Tiers 1 and 2 miss: retrieve app facts (`knowledge.mjs`), call Gemini (`gemini.mjs`), save the answer with its embedding and `source_fact_ids` to the cache, return it. With no internet or no key the user gets a friendly message.
 
-- **`INTENTS`** maps each action to 5-8 example phrases (formal, casual, broken grammar, Ugandan and East African slang). Their vectors are computed once at start-up.
-- A message is embedded the same way and compared by cosine similarity. The best intent wins if its confidence reaches the threshold (default `0.65`, override with the `ASSISTANT_MIN_CONFIDENCE` secret). Below it, the user gets a polite fallback that lists example commands.
-- Inputs such as a job title, company, country or pasted job advert are pulled out with regular expressions and validated; if one is missing, the assistant says exactly what to send.
-- To add a feature: add a function and an entry in `ACTIONS` (with a title and example) and 5-8 phrases in `INTENTS`. A test fails if the two lists disagree.
-- The embedder is a hashed bag of words, word pairs and character n-grams with IDF weights: pure JavaScript, no model file, under 3 ms per message. To use a neural model instead, replace `embed()` and `buildIndex()` in `router.mjs`; nothing else depends on how vectors are made.
+Cache upkeep (`cache.mjs`): LRU cap of 10,000 rows (`pruneCache`, also enforced on every insert) and `invalidateCacheByFact(admin, factId)` to drop answers built from a fact you changed. Editing a fact's text also invalidates them automatically through its version hash.
+
+To add a command: add a function and an entry in `ACTIONS`, plus 5-8 phrases in `INTENTS`; a test fails if the two disagree. After editing shared files run `npm run sync`.

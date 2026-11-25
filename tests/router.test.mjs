@@ -106,15 +106,15 @@ test('an empty profile gets a clear instruction, never made-up writing', () => {
   assert.match(ask('write a cover letter for Data Analyst', empty).reply, /profile is empty/i);
 });
 
-test('nothing here touches the network and no AI key is read', async () => {
+test('Tier 1 and the writing tools never touch the network, even when a Gemini key is set', async () => {
   const real = globalThis.fetch; let calls = 0;
   globalThis.fetch = () => { calls++; throw new Error('network is off'); };
   process.env.GEMINI_API_KEY = 'x'; process.env.OPENAI_API_KEY = 'x';
   try {
-    assert.equal((await ai.assistant({ message: 'hello', content })).mode, 'local');
+    assert.equal(ask('hello').intent, 'greet_user');
+    assert.equal(ask('what is 15% of 2000').intent, 'calculate');
     assert.ok((await ai.writeSummary({ content, job: null })).options.length > 0);
     assert.ok((await ai.writeCoverLetter({ content, job: { title: 'Analyst', company: '', description: 'x'.repeat(50), notes: '' }, tone: 'warm', country: 'UK' })).letter.includes('Yours faithfully'));
-    assert.equal(ai.aiEnabled(), false);
   } finally { globalThis.fetch = real; delete process.env.GEMINI_API_KEY; delete process.env.OPENAI_API_KEY; }
   assert.equal(calls, 0);
 });

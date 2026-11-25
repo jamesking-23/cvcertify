@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['public/**', '.github/workflows/pages.yml']
+    paths: ['public/**', 'scripts/download-model.js', 'scripts/build-intents.mjs', 'supabase/functions/cvc-api/router.mjs', 'supabase/functions/cvc-api/tier1.mjs', 'package.json', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -23,6 +23,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Tier 1 of the assistant runs on the visitor's device. Fetch the bge-small model and the Transformers.js runtime
+      # now and serve them from this site, so the browser never contacts Hugging Face or a CDN.
+      - name: Install runtime
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Download model and precompute intent vectors
+        run: npm run model
       - name: Stamp build version
         run: sed -i "s/name=\"cvc-build\" content=\"dev\"/name=\"cvc-build\" content=\"${GITHUB_SHA::7}\"/" public/index.html
       - uses: actions/configure-pages@v5

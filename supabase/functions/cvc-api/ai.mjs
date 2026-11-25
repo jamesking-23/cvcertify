@@ -1,16 +1,14 @@
 // The writing helpers behind the app. Everything runs offline in this process: no AI service, no API key, no network call.
-// The assistant chat is routed by router.mjs to deterministic actions (actions.mjs); the other helpers call the
-// profile-aware writing engine in offline.mjs directly. Same input data, no invented facts.
+// These helpers call the profile-aware writing engine in offline.mjs directly: same input data, no invented facts.
+// The assistant chat is not here: see tier1.mjs (browser), cache.mjs and ask.mjs (server), gemini.mjs (Tier 3 only).
 
 import { COUNTRIES, resumeToText } from './constants.js';
 import { extractKeywords } from './ats.mjs';
 import { yearsOfExperience } from './profile.mjs';
 import { dateRange } from './constants.js';
 import * as offline from './offline.mjs';
-import { handleMessage } from './actions.mjs';
 
 export { yearsOfExperience, dateRange };
-export const aiEnabled = () => false; // nothing external to enable
 export const basicBullet = (b) => offline.improveBullet(b)[0];
 
 const MODE = 'local';
@@ -50,9 +48,4 @@ export async function interviewPrep({ content, job }) {
 
 export async function skillRoadmap({ content, missing }) {
   return { mode: MODE, steps: offline.roadmapSteps(missing, content) };
-}
-
-export async function assistant({ message, content }) {
-  const out = handleMessage(message, { content });
-  return { reply: out.reply, intent: out.intent, confidence: Math.round(out.confidence * 100) / 100, mode: MODE };
 }
