@@ -123,3 +123,10 @@ test('normalising text handles case, punctuation and apostrophes', () => {
   assert.equal(normalize("  What's   MY  score?!  "), 'whats my score');
   assert.ok(buildIndex() > 80);
 });
+
+test('help with a named interview question gives a profile-based answer', () => {
+  const r = ask('Help me answer “Tell me about yourself”.', content);
+  assert.equal(r.intent, 'answer_interview_question');
+  assert.match(r.reply, /present, past, future/i);
+  assert.equal(ask('how do i answer why should we hire you', content).intent, 'answer_interview_question');
+});

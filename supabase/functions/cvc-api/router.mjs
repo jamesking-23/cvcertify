@@ -40,6 +40,11 @@ export const INTENTS = {
     'give me interview questions', 'help me prepare for an interview', 'what will they ask me in the interview', 'mock interview questions',
     'interview tips and prep', 'i have an interview tomorrow what to expect', 'interview questions for this role', 'interview coming how to prepare',
   ],
+  answer_interview_question: [
+    'how do i answer the about yourself question', 'answer for introduce yourself in an interview', 'how should i introduce myself in an interview',
+    'what do i say when they ask about me', 'how to answer why should we hire you', 'how do i answer what are your weaknesses',
+    'what are my strengths for the interview',
+  ],
   skill_roadmap: [
     'what skills should i learn', 'make me a learning plan', 'skill roadmap for the job', 'what skills am i missing for this role',
     'how do i close my skill gaps', 'i want to learn what to get this job', 'plan to improve my skills',

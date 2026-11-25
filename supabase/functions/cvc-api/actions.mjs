@@ -124,6 +124,32 @@ export function interview_questions(message, ctx) {
   return { reply: `Questions to prepare${job.title ? ` for a ${job.title} role` : ''}:\n\n${qs.map((x, i) => `${i + 1}. ${x.q}\n   Tip: ${x.tip}`).join('\n\n')}` };
 }
 
+const QUESTIONS = [
+  { re: /(tell|talk).{0,12}about (your|my)self|introduce (your|my)self|about me\b|walk me through/i, key: 'intro' },
+  { re: /why .{0,20}(hire|choose|pick|select) (you|me)|what (can|do) you (offer|bring)/i, key: 'hire' },
+  { re: /weakness|weaknesses|biggest flaw/i, key: 'weakness' },
+  { re: /strength|strengths|what are you good at/i, key: 'strength' },
+  { re: /why (do )?(you )?want (this|the) (job|role)|why .{0,20}(apply|join us)/i, key: 'why' },
+];
+export function answer_interview_question(message, ctx) {
+  const key = QUESTIONS.find((q) => q.re.test(String(message || '')))?.key;
+  const f = profileFacts(ctx.content);
+  if (key === 'intro') {
+    if (needProfile(f)) return { reply: EMPTY };
+    const now = f.hasExperience
+      ? `Present: "I am ${f.currentRole ? `${/^[aeiou]/i.test(f.currentRole) ? 'an' : 'a'} ${f.currentRole}` : 'working'}${f.currentCompany ? ` at ${f.currentCompany}` : ''}${f.years >= 1 ? `, with about ${f.years} year${f.years > 1 ? 's' : ''} of experience` : ''}."`
+      : `Present: "I ${f.studying ? 'am studying' : 'recently completed'} ${f.eduName || 'my studies'}${f.school ? ` at ${f.school}` : ''}."`;
+    const proof = f.achievements[0] ? `Past: "${cap(f.achievements[0].text)}."` : f.hasProjects ? `Past: "I built ${f.projects[0].name}${f.projects[0].tech ? ` using ${f.projects[0].tech}` : ''}."` : `Past: say one real thing you built, finished or led.`;
+    const skills = f.skills.length ? ` My strengths are ${list(f.skills.slice(0, 3))}.` : '';
+    return { reply: `Keep it to about a minute, in three parts: present, past, future.\n\n- ${now}${skills}\n- ${proof}\n- Future: "I want to bring this to the role you are hiring for, and grow in it."\n\nPut those together in your own words. Do not recite your whole CV, and keep it about work, not family or life story.` };
+  }
+  if (key === 'hire') return { reply: 'Answer in three parts: what you can do (your best matching skill), proof (one result with a number if you have it), and how you will help them (tie it to the job advert). Example shape: "You need X. I have done X at Y and achieved Z. I would bring that here from the first week."' };
+  if (key === 'weakness') return { reply: 'Pick a real, small weakness that does not block the job, then say what you are doing about it. Example shape: "I used to take on too much myself. Now I list my priorities each morning and ask for help early." Never say "I have no weakness" or "I work too hard".' };
+  if (key === 'strength') return { reply: `Choose two or three strengths that the job asks for, and give a short example of each.${f.skills.length ? ` From your profile, ${list(f.skills.slice(0, 3))} are good candidates.` : ''} Say what you did and what happened as a result.` };
+  if (key === 'why') return { reply: 'Say what attracts you to this company or role (something specific from the advert or their work), then how your skills fit. Avoid answers about salary or location alone.' };
+  return { reply: 'Tell me which question you want help with, for example:\n- help me answer tell me about yourself\n- how do I answer why should we hire you\n- how do I answer what are your weaknesses' };
+}
+
 export function skill_roadmap(message, ctx) {
   const f = profileFacts(ctx.content);
   if (needProfile(f)) return { reply: EMPTY };
@@ -193,6 +219,7 @@ export const ACTIONS = {
   write_cover_letter: { run: write_cover_letter, title: 'Draft a cover letter', example: 'write a cover letter for Accountant at Stanbic' },
   ats_score: { run: ats_score, title: 'Score your CV against a job advert', example: 'ats score: <paste the job description>' },
   interview_questions: { run: interview_questions, title: 'Interview questions with tips', example: 'interview questions for a teller job' },
+  answer_interview_question: { run: answer_interview_question, title: 'Help answering an interview question', example: 'help me answer tell me about yourself' },
   skill_roadmap: { run: skill_roadmap, title: 'Skills to learn for a job', example: 'skill roadmap: <paste the job description>' },
   profile_completeness: { run: profile_completeness, title: 'Check how complete your profile is', example: 'how complete is my profile' },
   years_experience: { run: years_experience, title: 'Count your years of experience', example: 'how many years of experience do I have' },
@@ -215,6 +242,12 @@ export function handleMessage(message, ctx = {}, { minConfidence = threshold() }
   const text = String(message || '').trim();
   const done = (o) => ({ ...o, ms: Math.round((performance.now() - started) * 100) / 100 });
   if (!text) return done({ reply: fallback(), intent: null, confidence: 0, matched: false });
+  // A well-known interview question quoted in the message ("help me answer 'tell me about yourself'") is an exact cue,
+  // and its wording overlaps with ordinary chat, so it is matched directly before similarity scoring.
+  if (/\b(answer|answering|respond|reply|say)\b/i.test(text) && QUESTIONS.some((q) => q.re.test(text))) {
+    const out = answer_interview_question(text, { content: ctx.content || {}, ...ctx });
+    return done({ reply: out.reply, intent: 'answer_interview_question', confidence: 1, matched: true });
+  }
   const top = classify(text)[0];
   if (!top || top.confidence < minConfidence) return done({ reply: fallback(), intent: null, confidence: top ? top.confidence : 0, matched: false });
   const out = ACTIONS[top.intent].run(text, { content: ctx.content || {}, ...ctx });
