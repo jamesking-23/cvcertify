@@ -114,7 +114,7 @@ export async function editor({ params }) {
       change();
       state.user.plan = out.plan;
       clear(results).append(
-        h('div', { class: `alert ${out.mode === 'ai' ? 'alert-info' : 'alert-warn'}` }, icon('sparkles'), h('div', null, h('strong', null, out.mode === 'ai' ? 'Resume tailored.' : 'Basic tailoring applied.'), out.notes.length > 0 && h('ul', { style: 'margin:6px 0 0 18px' }, out.notes.map((n) => h('li', null, n))))),
+        h('div', { class: 'alert alert-info' }, icon('sparkles'), h('div', null, h('strong', null, 'Resume tailored.'), out.notes.length > 0 && h('ul', { style: 'margin:6px 0 0 18px' }, out.notes.map((n) => h('li', null, n))))),
         h('button', { class: 'btn btn-outline btn-sm', style: 'align-self:flex-start', onclick: () => { Object.assign(content, undo); undo = null; rebuildContent(); change(); clear(results); toast('Reverted to your previous version.'); } }, 'Undo tailoring'));
     } catch (e) { handleAiError(e); }
     setBusy(tailorBtn, false);

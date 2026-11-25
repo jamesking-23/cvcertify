@@ -221,7 +221,7 @@ function freeBand() {
 
 /* ---------- questions ---------- */
 const QA = [
-  ['Does the AI make things up?', 'It’s instructed not to invent employers, titles, dates, qualifications or numbers, and it works from your profile. If you don’t have a figure for a bullet, it won’t supply one. Read everything before you send it. You’re the one signing it.'],
+  ['Does the writer make things up?', 'No. It only rearranges what is already on your profile into clear writing: it has no way to add employers, titles, dates, qualifications or numbers you did not enter. Nothing you write leaves our servers for an outside AI service. Read everything before you send it. You’re the one signing it.'],
   ['What does the document ID prove?', 'That the document was issued from your account and hasn’t been changed since. If you edit it, the check page says it changed. If you revoke it, the page says that too. It doesn’t vouch for your employers or degrees.'],
   ['Will applicant tracking systems read it?', 'The layouts use real text, not images. The single-column ones (Classic, Modern, Compact, Executive, Timeline) are the safest. Academic uses tables and Rail uses a side column, which most parsers handle but a few don’t, so use Classic when a portal is picky.'],
   ['Which countries are covered?', 'Eight formats: US, Canada, UK, EU, Africa, Australia and New Zealand, India, and the Middle East. They change the document’s name, paper size, and whether date of birth, nationality and referees appear.'],

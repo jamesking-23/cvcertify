@@ -59,7 +59,7 @@ export const atsPage = () => toolShell({ title: 'ATS scanner', sub: 'Score a res
 
 export const interviewPage = () => toolShell({
   title: 'Interview prep', sub: 'Likely questions for this role, with tips drawn from your real experience.', feature: 'interview', runLabel: 'Generate questions', run: (b) => post('/ai/interview', b),
-  render: (r) => h('div', { class: 'stack' }, r.mode === 'basic' && h('div', { class: 'alert alert-info' }, icon('sparkles'), 'Built from your profile and this job description.'),
+  render: (r) => h('div', { class: 'stack' }, r.mode === 'local' && h('div', { class: 'alert alert-info' }, icon('sparkles'), 'Built from your profile and this job description.'),
     r.questions.map((q, i) => h('div', { class: 'card' }, h('div', { class: 'eyebrow small' }, `Question ${i + 1}`), h('h3', { style: 'margin:4px 0 8px;font-size:17px' }, q.q), h('p', { class: 'muted' }, q.tip)))),
 });
 

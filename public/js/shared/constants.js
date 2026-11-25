@@ -1,6 +1,6 @@
 // Shared by the browser and the Netlify function. Plain ES module, no dependencies.
 
-// Everything is free. AI writing has a monthly fair-use allowance so the free AI quota lasts for everyone.
+// Everything is free and runs on our own servers with no external AI service, so there is no usage cap.
 export const PLANS = {
   starter: {
     id: 'starter',
@@ -8,7 +8,7 @@ export const PLANS = {
     price: 0,
     tagline: 'Everything, free for everyone.',
     features: ['Unlimited resumes & versions', 'All templates and letter formats', 'AI writing, tailoring, ATS scan, interview prep', 'Skill roadmaps, portfolio & document verification'],
-    limits: { resumes: Infinity, rewrites: 200, letters: Infinity, ats: true, interview: true, roadmap: true, portfolio: true },
+    limits: { resumes: Infinity, rewrites: Infinity, letters: Infinity, ats: true, interview: true, roadmap: true, portfolio: true },
   },
 };
 

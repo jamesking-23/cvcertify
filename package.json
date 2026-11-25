@@ -11,7 +11,7 @@
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "sync": "node scripts/sync-function.mjs",
-    "test": "node --test tests/unit.test.mjs",
+    "test": "node --test tests/unit.test.mjs tests/router.test.mjs",
     "test:e2e": "node tests/e2e.mjs"
   },
   "devDependencies": {

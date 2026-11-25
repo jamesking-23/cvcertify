@@ -1,5 +1,5 @@
 // CV-Certify server-side tasks: AI writing, ATS scoring. Everything else is plain Postgres behind RLS.
-// Plan gating and AI quotas are enforced here via service-role-only SQL functions, so clients cannot bypass them.
+// Feature gating is enforced here via service-role-only SQL functions. All writing runs offline in this process.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as ai from "./ai.mjs";
 import { scoreResume } from "./ats.mjs";
@@ -66,20 +66,8 @@ Deno.serve(async (req) => {
       const { error } = await admin.rpc("cvc_require_feature", { p_user: user.id, p_feature: f });
       if (error) rpcError(error);
     };
-    const spend = async () => {
-      const { data, error } = await admin.rpc("cvc_spend_rewrite", { p_user: user.id });
-      if (error) rpcError(error);
-      return data;
-    };
-    const metered = async <T>(fn: () => Promise<T>) => {
-      const plan = await spend();
-      try {
-        return { ...(await fn()), plan };
-      } catch (e) {
-        await admin.rpc("cvc_refund_rewrite", { p_user: user.id }); // the AI call failed: give the quota back
-        throw e;
-      }
-    };
+    // Writing runs locally with no external service, so there is no quota to spend.
+    const metered = async <T>(fn: () => Promise<T>) => ({ ...(await fn()), plan: null });
 
     switch (task) {
       case "bullets":

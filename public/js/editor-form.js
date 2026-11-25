@@ -103,7 +103,7 @@ export function contentForm(c, change, { country = 'US', ai } = {}) {
     const panel = h('div', { class: 'suggest', hidden: true });
     const showOptions = (out) => {
       clear(panel).append(
-        h('div', { class: 'suggest-head' }, h('b', null, `${out.options.length} options`), h('span', { class: 'muted small' }, out.mode === 'ai' ? 'Written from your profile. Edit anything that is not true for you.' : 'Offline writer: built from your profile, different on every request. Edit anything that is not true for you.')),
+        h('div', { class: 'suggest-head' }, h('b', null, `${out.options.length} options`), h('span', { class: 'muted small' }, 'Built from your profile and different on every request. Edit anything that is not true for you.')),
         ...out.options.map((o) => h('div', { class: 'suggest-card' }, h('div', { class: 'suggest-meta' }, h('span', { class: 'tag' }, o.label), h('span', { class: 'muted small' }, `${o.words || o.text.split(/\s+/).length} words`)), h('p', null, o.text),
           h('button', { type: 'button', class: 'btn btn-outline btn-sm', onclick: () => { ta.value = c.summary = o.text; change(); toast('Summary applied.'); } }, 'Use this'))),
         h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: () => btn.click() }, icon('sparkles', 'icon-sm'), 'Show me different ones'));
