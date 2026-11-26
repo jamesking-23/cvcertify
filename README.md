@@ -52,6 +52,9 @@ insert into public.cvc_admins (user_id) select id from auth.users where email = 
 
 The **Admin** link then appears in the app sidebar (visitors, users, activity).
 
+## Portfolio designs
+A page's look is three independent choices plus light/dark: 10 layouts (Atelier, Rail, Monolith, Bento, Timeline, Magazine, Terminal, Spotlight, Swiss, Classic), 14 colour palettes and 12 typefaces, so 3,360 looks. `public/js/portfolio-designs.js` holds the data; `public/css/portfolio.css` the layouts. Pages with no saved choice get a stable look derived from their web address, so two people rarely look alike. Every palette is contrast-tested in both modes (`tests/designs.test.mjs`). To add a layout: add it to `DESIGNS` and write its `.pf[data-design="id"]` block.
+
 ## The assistant: three tiers
 1. **Tier 1, on your device (offline).** `public/js/assistant/` loads the quantized `Xenova/bge-small-en-v1.5` model (~33 MB) with Transformers.js from local files only (`allowRemoteModels = false`). `npm run model` downloads the model and runtime into `public/models` and `public/vendor` and precomputes the intent vectors; the Pages workflow runs it on every build. A message is embedded and compared (cosine >= 0.72) with the `INTENTS` bank in `router.mjs`; the winning intent runs a typed function in `actions.mjs` (greetings, help, calculator, CV tools). Until the model has loaded, or if it fails, a built-in hashed n-gram embedder keeps Tier 1 working.
 2. **Tier 2, shared semantic cache.** On a Tier 1 miss the browser sends its bge embedding to the `ask` task. The function looks it up in `cvc_response_cache` (pgvector) and returns a stored answer when cosine >= 0.90, the extracted conditions (country) match, and the source facts are unchanged. Questions containing numbers or about the person's own data are never cached. Hits update `last_used_at`.

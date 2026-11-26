@@ -3,15 +3,18 @@ import { get } from '../api.js';
 import { formatMonth } from '../shared/constants.js';
 import { seal } from '../seal.js';
 
-let assets;
-export function loadPortfolioAssets() {
-  if (assets) return assets;
-  const link = (href) => new Promise((res) => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = l.onerror = res; document.head.append(l); });
-  assets = Promise.all([
-    link('css/portfolio.css'),
-    link('https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&display=swap'),
-  ]);
-  return assets;
+import { TYPEFACES, resolveStyle, paletteVars, fontVars, fontsHref } from '../portfolio-designs.js';
+
+const loaded = new Map();
+const sheet = (href) => {
+  if (!loaded.has(href)) loaded.set(href, new Promise((res) => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = l.onerror = res; document.head.append(l); }));
+  return loaded.get(href);
+};
+/** Loads the portfolio stylesheet and the fonts for one typeface (or all of them, for the editor's picker). Never blocks for long. */
+export function loadPortfolioAssets(typeface) {
+  const fonts = typeface === 'all' ? TYPEFACES.map((t) => fontsHref(t.id)) : [fontsHref(typeface)];
+  const timeout = new Promise((r) => setTimeout(r, 2500));
+  return Promise.race([Promise.all([sheet('css/portfolio.css'), ...fonts.map(sheet)]), timeout]);
 }
 
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
@@ -26,14 +29,18 @@ function readTheme(fallback) {
 
 /** Builds the portfolio DOM from public data. Used by the live page and by the editor preview. */
 export function renderPortfolio(d, { preview = false } = {}) {
-  const root = h('div', { class: 'pf', 'data-theme': preview ? d.theme : readTheme(d.theme) });
-  const sec = (title, ...body) => h('section', { class: 'pf-sec' }, h('h2', null, title), h('div', null, ...body));
+  const style = resolveStyle(d);
+  const mode = preview ? d.theme : readTheme(d.theme);
+  const root = h('div', { class: 'pf', 'data-theme': mode, 'data-design': style.design });
+  const paint = (m) => { root.dataset.theme = m; for (const [k, v] of Object.entries({ ...paletteVars(style.palette, m), ...fontVars(style.typeface) })) root.style.setProperty(k, v); };
+  paint(mode);
+  const sec = (key, title, ...body) => h('section', { class: `pf-sec pf-sec--${key}` }, h('h2', null, title), h('div', null, ...body));
   const sealed = !!d.docId;
   const links = (d.links || []).filter((l) => l.label && /^https?:\/\//i.test(l.url));
   const skills = (d.skills || []).filter(Boolean);
 
   const themeBtn = (mode, label) => h('button', { type: 'button', 'aria-pressed': String(root.dataset.theme === mode), onclick: () => {
-    root.dataset.theme = mode;
+    paint(mode);
     try { localStorage.setItem('cvc_pf_theme', mode); } catch { /* ignore */ }
     toggle.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
   }, 'data-mode': mode }, label);
@@ -43,7 +50,7 @@ export function renderPortfolio(d, { preview = false } = {}) {
     h('header', { class: 'pf-top' },
       h('a', { class: 'pf-mark', href: '/', 'aria-label': 'CV-Certify home' }, h('i'), 'CV-Certify'),
       preview ? null : toggle),
-    h('main', { id: 'main' },
+    h('main', { id: 'main', class: 'pf-main' },
       h('section', { class: 'pf-hero' },
         h('div', null,
           h('h1', { class: 'pf-name' }, d.name || 'Your name'),
@@ -51,27 +58,27 @@ export function renderPortfolio(d, { preview = false } = {}) {
           (d.location || d.availability) && h('div', { class: 'pf-meta' }, d.location && h('span', null, d.location), d.availability && h('span', { class: 'pf-avail' }, d.availability))),
         h('div', { class: 'pf-seal' }, seal(d.docId || d.name || 'cvc', { initials: initialsOf(d.name), sealed, size: 330 }))),
 
-      d.about && sec('About', h('p', { class: 'pf-about' }, d.about)),
+      d.about && sec('about', 'About', h('p', { class: 'pf-about' }, d.about)),
 
-      (d.experience || []).length > 0 && sec('Experience', ...d.experience.map((e) => h('div', { class: 'pf-job' },
+      (d.experience || []).length > 0 && sec('experience', 'Experience', ...d.experience.map((e) => h('div', { class: 'pf-job' },
         h('div', { class: 'pf-when' }, range(e)),
         h('div', null, h('h3', null, e.role || e.company), e.role && e.company && h('p', { class: 'pf-org' }, [e.company, e.location].filter(Boolean).join(', ')),
           (e.bullets || []).length > 0 && h('ul', null, e.bullets.map((b) => h('li', null, b))))))),
 
-      (d.projects || []).length > 0 && sec('Selected work', h('div', { class: 'pf-proj' }, d.projects.map((p) => h('article', null,
+      (d.projects || []).length > 0 && sec('work', 'Selected work', h('div', { class: 'pf-proj' }, d.projects.map((p) => h('article', null,
         h('h3', null, p.link ? h('a', { href: safeUrl(p.link), target: '_blank', rel: 'noopener noreferrer' }, p.name) : p.name),
         p.tech && h('p', { class: 'pf-tech' }, p.tech), p.description && h('p', null, p.description))))),
 
-      (d.education || []).length > 0 && sec('Education', h('div', { class: 'pf-rows' }, d.education.map((e) => h('div', { class: 'pf-row' },
+      (d.education || []).length > 0 && sec('education', 'Education', h('div', { class: 'pf-rows' }, d.education.map((e) => h('div', { class: 'pf-row' },
         h('b', null, [e.degree, e.field].filter(Boolean).join(', ') || e.school), h('span', null, range(e)), e.degree || e.field ? h('small', null, e.school) : null)))),
 
-      (d.certifications || []).length > 0 && sec('Certifications', h('div', { class: 'pf-rows' }, d.certifications.map((c) => h('div', { class: 'pf-row' }, h('b', null, c.name), h('span', null, c.year), c.issuer && h('small', null, c.issuer))))),
+      (d.certifications || []).length > 0 && sec('certs', 'Certifications', h('div', { class: 'pf-rows' }, d.certifications.map((c) => h('div', { class: 'pf-row' }, h('b', null, c.name), h('span', null, c.year), c.issuer && h('small', null, c.issuer))))),
 
-      skills.length > 0 && sec('Skills', h('p', { class: 'pf-skills' }, skills.flatMap((s, i) => (i ? [h('i', null, '/'), s] : [s])))),
+      skills.length > 0 && sec('skills', 'Skills', h('p', { class: 'pf-skills' }, skills.flatMap((s, i) => (i ? [h('i', { 'aria-hidden': 'true' }, '/'), h('span', null, s)] : [h('span', null, s)])))),
 
-      (d.languages || []).length > 0 && sec('Languages', h('div', { class: 'pf-rows' }, d.languages.map((l) => h('div', { class: 'pf-row' }, h('b', null, l.name), h('span', null, l.level))))),
+      (d.languages || []).length > 0 && sec('languages', 'Languages', h('div', { class: 'pf-rows' }, d.languages.map((l) => h('div', { class: 'pf-row' }, h('b', null, l.name), h('span', null, l.level))))),
 
-      (d.contact?.email || d.contact?.phone || links.length > 0) && sec('Get in touch', h('div', { class: 'pf-contact' },
+      (d.contact?.email || d.contact?.phone || links.length > 0) && sec('contact', 'Get in touch', h('div', { class: 'pf-contact' },
         d.contact?.email && h('a', { href: 'mailto:' + d.contact.email }, d.contact.email),
         d.contact?.phone && h('a', { href: 'tel:' + d.contact.phone.replace(/[^\d+]/g, '') }, d.contact.phone),
         links.length > 0 && h('div', { class: 'pf-links' }, links.map((l) => h('a', { href: safeUrl(l.url), target: '_blank', rel: 'noopener noreferrer' }, l.label))))),
@@ -87,8 +94,8 @@ export function renderPortfolio(d, { preview = false } = {}) {
 }
 
 export default async function portfolioPublic({ params }) {
-  await loadPortfolioAssets();
   const d = await get('/p/' + encodeURIComponent(params.slug));
+  await loadPortfolioAssets(resolveStyle(d).typeface);
   setTitle(d.name);
   return renderPortfolio(d);
 }

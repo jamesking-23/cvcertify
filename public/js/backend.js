@@ -50,7 +50,7 @@ function userView(u) {
 const stale = (r) => !!r.doc_id && r.current_hash !== r.certified_hash;
 const resumeView = (r) => ({ id: r.id, title: r.title, template: r.template, country: r.country, content: r.content, job: r.job || {}, docId: r.doc_id || null, certifiedAt: r.certified_at || null, certifiedHash: r.certified_hash || null, updatedAt: r.updated_at, createdAt: r.created_at });
 const letterView = (l) => ({ id: l.id, title: l.title, text: l.text, job: l.job || {}, resumeId: l.resume_id || null, format: l.format || 'formal', updatedAt: l.updated_at, createdAt: l.created_at });
-const portfolioView = (p) => ({ enabled: !!p?.enabled, slug: p?.slug || '', headline: p?.headline || '', about: p?.about || '', links: p?.links || [], resumeId: p?.resume_id || null, showContact: !!p?.show_contact, availability: p?.availability || '', theme: p?.theme === 'dark' ? 'dark' : 'light' });
+const portfolioView = (p) => ({ enabled: !!p?.enabled, slug: p?.slug || '', headline: p?.headline || '', about: p?.about || '', links: p?.links || [], resumeId: p?.resume_id || null, showContact: !!p?.show_contact, availability: p?.availability || '', theme: p?.theme === 'dark' ? 'dark' : 'light', design: p?.design || '', palette: p?.palette || '', typeface: p?.typeface || '' });
 const one = (rows, what) => {
   const r = Array.isArray(rows) ? rows[0] : rows;
   if (!r) throw new ApiError(`${what} not found.`, 404, 'not_found');
@@ -183,12 +183,13 @@ on('PUT', /^\/letters\/([^/]+)$/, async ([id], b) => ({ letter: letterView(one(a
 on('DELETE', /^\/letters\/([^/]+)$/, async ([id]) => { await rest('DELETE', 'cvc_letters', { query: eq(id) }); return { ok: true }; });
 
 // portfolio
+const styleId = (v) => (/^[a-z0-9-]{1,24}$/.test(String(v || '')) ? String(v) : '');
 on('GET', /^\/portfolio$/, async () => ({ portfolio: portfolioView((await rest('GET', 'cvc_portfolios', { query: 'select=*' }))[0]) }));
 on('PUT', /^\/portfolio$/, async (_, b) => {
   const slug = cleanSlug(b.slug);
   if (b.enabled && slug.length < 3) throw new ApiError('Choose a web address of at least 3 letters, numbers or hyphens.', 400, 'bad_slug');
   const links = (Array.isArray(b.links) ? b.links : []).slice(0, 8).map((l) => ({ label: text(l?.label, 60).trim(), url: text(l?.url, 300).trim() })).filter((l) => l.label && /^https?:\/\//i.test(l.url));
-  const body = { enabled: !!b.enabled, slug: slug || null, headline: text(b.headline, 160).trim(), about: text(b.about, 1500).trim(), links, resume_id: b.resumeId || null, show_contact: !!b.showContact, availability: text(b.availability, 60).trim(), theme: b.theme === 'dark' ? 'dark' : 'light' };
+  const body = { enabled: !!b.enabled, slug: slug || null, headline: text(b.headline, 160).trim(), about: text(b.about, 1500).trim(), links, resume_id: b.resumeId || null, show_contact: !!b.showContact, availability: text(b.availability, 60).trim(), theme: b.theme === 'dark' ? 'dark' : 'light', design: styleId(b.design), palette: styleId(b.palette), typeface: styleId(b.typeface) };
   const row = one(await rest('POST', 'cvc_portfolios', { query: 'on_conflict=user_id', prefer: `${REP},resolution=merge-duplicates`, body }), 'Portfolio');
   return { portfolio: portfolioView(row) };
 });
